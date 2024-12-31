@@ -1,13 +1,10 @@
 ﻿#nullable disable
 
-using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Runtime.InteropServices;
 using BizHawk.Common.IOExtensions;
 using BizHawk.Common.BufferExtensions;
-using CommunityToolkit.HighPerformance;
 
 namespace BizHawk.Common
 {
