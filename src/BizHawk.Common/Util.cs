@@ -14,6 +14,31 @@ namespace BizHawk.Common
 {
 	public static unsafe class Util
 	{
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static ReadOnlySpan<byte> AsReadOnlyBytes<T>(this T[] span)
+			where T : struct =>
+			MemoryMarshal.Cast<T, byte>(span);
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Span<byte> AsBytes<T>(this T[] span)
+			where T : struct =>
+			MemoryMarshal.Cast<T, byte>(span);
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static ReadOnlySpan<byte> AsReadOnlyBytes<T>(this Span<T> span)
+			where T : struct =>
+			MemoryMarshal.Cast<T, byte>(span);
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Span<byte> AsBytes<T>(this Span<T> span)
+			where T : struct =>
+			MemoryMarshal.Cast<T, byte>(span);
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static ReadOnlySpan<byte> AsReadOnlyBytes<T>(this ReadOnlySpan<T> span)
+			where T : struct =>
+			MemoryMarshal.Cast<T, byte>(span);
+
 		[Conditional("DEBUG")]
 		public static void BreakDebuggerIfAttached()
 		{
@@ -171,18 +196,15 @@ namespace BizHawk.Common
 			if (len == 0 && returnNull) 
 				return 0;
 
-			var ret = ArrayPool<byte>.Shared.Rent(bytes.Length);
 			var ofs = 0;
 			while (len > 0)
 			{
-				var done = br.Read(ret, ofs, len);
+				var done = br.BaseStream.Read(bytes.Slice(ofs, len));
 				if (done is 0) _ = br.ReadByte(); // triggers an EndOfStreamException (as there's otherwise no way to indicate this failure state to the caller)
 				ofs += done;
 				len -= done;
 			}
 
-			ret.AsSpan(0, bytes.Length).CopyTo(bytes);
-			ArrayPool<byte>.Shared.Return(ret);
 			return ofs;
 		}
 		
@@ -365,10 +387,7 @@ namespace BizHawk.Common
 			if (data.Length == 0)
 				return useNull ? null : 0;
 			
-			var arr = ArrayPool<byte>.Shared.Rent(data.Length);
-			data.CopyTo(arr);
-			bw.Write(arr, 0, data.Length);
-			ArrayPool<byte>.Shared.Return(arr);
+			bw.BaseStream.Write(data);
 			return data.Length;
 		}
 	}

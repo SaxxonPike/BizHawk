@@ -205,7 +205,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				ReadOnlySpan<byte> temp = val.AsBytes();
+				var temp = val.AsReadOnlyBytes();
 				_tw.WriteLine("{0} {1}", name, temp.BytesToHexString());
 				return temp.Length;
 			}
@@ -299,7 +299,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteByteBuffer(val.AsBytes(), useNull);
 			}
 		}
 
@@ -315,7 +315,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteByteBuffer(val.AsBytes(), useNull);
 			}
 		}
 
@@ -375,7 +375,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteByteBuffer(val.AsBytes(), useNull);
 			}
 		}
 
@@ -413,7 +413,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteByteBuffer(val.AsBytes(), useNull);
 			}
 		}
 
@@ -451,7 +451,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteByteBuffer(val.AsBytes(), useNull);
 			}
 		}
 
@@ -489,7 +489,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteByteBuffer(val.AsBytes(), useNull);
 			}
 		}
 
@@ -511,7 +511,7 @@ namespace BizHawk.Common
 			else
 			{
 				var temp = val ?? Array.Empty<double>();
-				_tw.WriteLine("{0} {1}", name, temp.ToUByteBuffer().BytesToHexString());
+				_tw.WriteLine("{0} {1}", name, temp.AsReadOnlyBytes().BytesToHexString());
 			}
 		}
 
