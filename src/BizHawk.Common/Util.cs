@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,6 +8,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
+using CommunityToolkit.HighPerformance;
 
 namespace BizHawk.Common
 {
@@ -161,6 +163,29 @@ namespace BizHawk.Common
 			for (var i = 0; i != len; i++) bptr[i] = (byte) val;
 		}
 
+		public static int? ReadByteBuffer(this BinaryReader br, Span<byte> bytes, bool returnNull)
+		{
+			// TODO: revisit when we update .NET version for native BinaryReader Span support.
+			
+			var len = br.ReadInt32();
+			if (len == 0 && returnNull) 
+				return 0;
+
+			var ret = ArrayPool<byte>.Shared.Rent(bytes.Length);
+			var ofs = 0;
+			while (len > 0)
+			{
+				var done = br.Read(ret, ofs, len);
+				if (done is 0) _ = br.ReadByte(); // triggers an EndOfStreamException (as there's otherwise no way to indicate this failure state to the caller)
+				ofs += done;
+				len -= done;
+			}
+
+			ret.AsSpan(0, bytes.Length).CopyTo(bytes);
+			ArrayPool<byte>.Shared.Return(ret);
+			return ofs;
+		}
+		
 		public static byte[]? ReadByteBuffer(this BinaryReader br, bool returnNull)
 		{
 			var len = br.ReadInt32();
@@ -330,6 +355,21 @@ namespace BizHawk.Common
 				bw.Write(data.Length);
 				bw.Write(data);
 			}
+		}
+
+		public static int? WriteByteBuffer(this BinaryWriter bw, ReadOnlySpan<byte> data, bool useNull)
+		{
+			// TODO: revisit when we update .NET version for native BinaryWriter Span support.
+			
+			bw.Write(data.Length);
+			if (data.Length == 0)
+				return useNull ? null : 0;
+			
+			var arr = ArrayPool<byte>.Shared.Rent(data.Length);
+			data.CopyTo(arr);
+			bw.Write(arr, 0, data.Length);
+			ArrayPool<byte>.Shared.Return(arr);
+			return data.Length;
 		}
 	}
 }

@@ -137,7 +137,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 				ser.Sync($"_usedDiskTracks{i}", ref _usedDiskTracks[i], useNull: false);
 				for (var j = 0; j < 84; j++)
 				{
-					ser.Sync($"DiskDeltas{i},{j}", ref _diskDeltas[i, j], useNull: true);
+					_diskDeltaSizes[i, j] = ser.SyncSpan($"DiskDeltas{i},{j}", _diskDeltas[i, j].AsSpan(), _diskDeltaSizes[i, j], useNull: true) ?? 0;
 				}
 			}
 
@@ -265,15 +265,25 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 		// _usedDiskTracks.Length also doubles as a way to remember the disk count
 		private bool[][] _usedDiskTracks;
 		private byte[,][] _diskDeltas;
+		private int[,] _diskDeltaSizes;
+
 		private readonly Func<int> _getCurrentDiskNumber;
 
 		public void InitSaveRam(int diskCount)
 		{
 			_usedDiskTracks = new bool[diskCount][];
 			_diskDeltas = new byte[diskCount, 84][];
+			_diskDeltaSizes = new int[diskCount, 84];
+
+			var maxDeltaSize = DeltaSerializer.GetMaxDeltaSize<int>(Disk.FluxEntriesPerTrack);
+			
 			for (var i = 0; i < diskCount; i++)
 			{
 				_usedDiskTracks[i] = new bool[84];
+				for (var j = 0; j < 84; j++)
+				{
+					_diskDeltas[i, j] = new byte[maxDeltaSize];
+				}
 			}
 		}
 
@@ -291,7 +301,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 				bw.WriteByteBuffer(_usedDiskTracks[i].ToUByteBuffer());
 				for (var j = 0; j < 84; j++)
 				{
-					bw.WriteByteBuffer(_diskDeltas[i, j]);
+					bw.WriteByteBuffer(_diskDeltas[i, j].AsSpan(0, _diskDeltaSizes[i, j]), true);
 				}
 			}
 
@@ -316,7 +326,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 				_usedDiskTracks[i] = br.ReadByteBuffer(returnNull: false)!.ToBoolBuffer();
 				for (var j = 0; j < 84; j++)
 				{
-					_diskDeltas[i, j] = br.ReadByteBuffer(returnNull: true);
+					_diskDeltaSizes[i, j] = br.ReadByteBuffer(_diskDeltas[i, j], returnNull: true) ?? 0;
 				}
 			}
 
@@ -327,17 +337,22 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 		public void SaveDeltas()
 		{
-			_disk?.DeltaUpdate((tracknum, original, current) =>
+			_disk?.DeltaUpdate((trackNum, original, current) =>
 			{
-				_diskDeltas[_getCurrentDiskNumber(), tracknum] = DeltaSerializer.GetDelta<int>(original, current).ToArray();
+				var diskNum = _getCurrentDiskNumber();
+				var delta = DeltaSerializer.GetDelta<int>(original, current, _diskDeltas[_getCurrentDiskNumber(), trackNum]);
+				_diskDeltaSizes[diskNum, trackNum] = delta.Length;
 			});
 		}
 
 		public void LoadDeltas()
 		{
-			_disk?.DeltaUpdate((tracknum, original, current) =>
+			_disk?.DeltaUpdate((trackNum, original, current) =>
 			{
-				DeltaSerializer.ApplyDelta<int>(original, current, _diskDeltas[_getCurrentDiskNumber(), tracknum]);
+				var diskNum = _getCurrentDiskNumber();
+				var delta = _diskDeltas[diskNum, trackNum].AsSpan(0, _diskDeltaSizes[diskNum, trackNum]);
+				if (delta.Length > 0)
+					DeltaSerializer.ApplyDelta<int>(original, current, delta);
 			});
 		}
 
