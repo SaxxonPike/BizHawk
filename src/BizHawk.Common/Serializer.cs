@@ -1,13 +1,11 @@
 ﻿#nullable disable
 
-using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Runtime.InteropServices;
+
 using BizHawk.Common.IOExtensions;
 using BizHawk.Common.BufferExtensions;
-using CommunityToolkit.HighPerformance;
 
 namespace BizHawk.Common
 {
@@ -164,53 +162,6 @@ namespace BizHawk.Common
 			{
 				_tw.WriteLine("{0} {1}", name, val);
 			}
-		}
-
-		public int? SyncSpan<T>(string name, Span<T> val, int length, bool useNull) 
-			where T : unmanaged
-		{
-			if (IsText)
-			{
-				return SyncSpanText(name, val, length, useNull);
-			}
-
-			if (IsReader)
-			{
-				var span = val.AsBytes();
-				return _br.ReadByteBuffer(span, useNull);
-			}
-			else
-			{
-				var span = val.Slice(0, length).AsBytes();
-				return _bw.WriteByteBuffer(span, useNull);
-			}
-		}
-
-		public int? SyncSpanText<T>(string name, Span<T> val, int length, bool useNull)
-			where T : unmanaged
-		{
-			var bytes = val.AsBytes();
-
-			if (IsReader)
-			{
-				if (Present(name))
-				{
-					var outBytes = Item(name).HexStringToBytes();
-					outBytes.CopyTo(bytes);
-					return outBytes.Length;
-				}
-
-				if (val.Length == 0 && useNull)
-					return null;
-			}
-			else
-			{
-				ReadOnlySpan<byte> temp = val.AsBytes();
-				_tw.WriteLine("{0} {1}", name, temp.BytesToHexString());
-				return temp.Length;
-			}
-			
-			return 0;
 		}
 
 		public void Sync(string name, ref byte[] val, bool useNull)
@@ -784,23 +735,6 @@ namespace BizHawk.Common
 			}
 		}
 
-		public ReadOnlySpan<byte> SyncDelta<T>(string name, ReadOnlySpan<T> original, Span<T> current, int deltaSize, Span<byte> delta)
-			where T : unmanaged
-		{
-			if (IsReader)
-			{
-				var len = SyncSpan(name, delta, deltaSize, useNull: false);
-				DeltaSerializer.ApplyDelta(original, current, delta);
-				return delta.Slice(len ?? 0);
-			}
-			else
-			{
-				var len = DeltaSerializer.GetDelta(original, current, delta).Length;
-				SyncSpan(name, delta.Slice(len), deltaSize, useNull: false);
-				return delta.Slice(len);
-			}
-		}
-		
 		private BinaryReader _br;
 		private BinaryWriter _bw;
 		private TextReader _tr;

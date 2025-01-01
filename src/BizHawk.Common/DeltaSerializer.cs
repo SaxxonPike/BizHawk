@@ -20,18 +20,7 @@ namespace BizHawk.Common
 	/// </summary>
 	public static class DeltaSerializer
 	{
-		public static int GetMaxDeltaSize<T>(int count)
-			where T : unmanaged =>
-			Marshal.SizeOf<T>() * count;
-
 		public static ReadOnlySpan<byte> GetDelta<T>(ReadOnlySpan<T> original, ReadOnlySpan<T> current)
-			where T : unmanaged
-		{
-			var ret = new byte[GetMaxDeltaSize<T>(current.Length) + 4].AsSpan(); // worst case scenario size (i.e. everything is different)
-			return GetDelta(original, current, ret);
-		}
-
-		public static ReadOnlySpan<byte> GetDelta<T>(ReadOnlySpan<T> original, ReadOnlySpan<T> current, Span<byte> ret)
 			where T : unmanaged
 		{
 			var orignalAsBytes = MemoryMarshal.AsBytes(original);
@@ -44,6 +33,7 @@ namespace BizHawk.Common
 
 			var index = 0;
 			var end = currentAsBytes.Length;
+			var ret = new byte[end + 4].AsSpan(); // worst case scenario size (i.e. everything is different)
 			var retSize = 0;
 
 			while (index < end)
