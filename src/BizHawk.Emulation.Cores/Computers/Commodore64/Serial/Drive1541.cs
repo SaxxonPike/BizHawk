@@ -88,8 +88,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			ser.BeginSection("Disk6502");
 			_cpu.SyncState(ser);
 			ser.EndSection();
-
-			ser.SyncSpan("RAM", _ram.AsSpan(), _ram.Length, useNull: false);
+			
+			ser.Sync("RAM", ref _ram, useNull: false);
 
 			ser.BeginSection("VIA0");
 			Via0.SyncState(ser);
@@ -137,11 +137,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 				ser.Sync($"_usedDiskTracks{i}", ref _usedDiskTracks[i], useNull: false);
 				for (var j = 0; j < 84; j++)
 				{
-					var delta = _diskDeltas[i, j];
-					_diskDeltas[i, j] = delta with
-					{
-						Size = ser.SyncSpan(delta.Id, delta.Buffer.AsSpan(), delta.Size, useNull: true) ?? 0
-					};
+					_diskDeltaSizes[i, j] = ser.SyncSpan($"DiskDeltas{i},{j}", _diskDeltas[i, j].AsSpan(), _diskDeltaSizes[i, j], useNull: true) ?? 0;
 				}
 			}
 
@@ -268,14 +264,16 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 		// we keep it here for all disks as we need to remember it when swapping disks around
 		// _usedDiskTracks.Length also doubles as a way to remember the disk count
 		private bool[][] _usedDiskTracks;
-		private (byte[] Buffer, int Size, string Id)[,] _diskDeltas;
+		private byte[,][] _diskDeltas;
+		private int[,] _diskDeltaSizes;
 
 		private readonly Func<int> _getCurrentDiskNumber;
 
 		public void InitSaveRam(int diskCount)
 		{
 			_usedDiskTracks = new bool[diskCount][];
-			_diskDeltas = new (byte[], int, string)[diskCount, 84];
+			_diskDeltas = new byte[diskCount, 84][];
+			_diskDeltaSizes = new int[diskCount, 84];
 
 			var maxDeltaSize = DeltaSerializer.GetMaxDeltaSize<int>(Disk.FluxEntriesPerTrack);
 			
@@ -284,7 +282,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 				_usedDiskTracks[i] = new bool[84];
 				for (var j = 0; j < 84; j++)
 				{
-					_diskDeltas[i, j] = (Buffer: new byte[maxDeltaSize], Size: 0, Id: $"DiskDeltas{i},{j}");
+					_diskDeltas[i, j] = new byte[maxDeltaSize];
 				}
 			}
 		}
@@ -303,8 +301,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 				bw.WriteByteBuffer(_usedDiskTracks[i].ToUByteBuffer());
 				for (var j = 0; j < 84; j++)
 				{
-					var delta = _diskDeltas[i, j];
-					bw.WriteByteBuffer(delta.Buffer.AsSpan(0, delta.Size), true);
+					bw.WriteByteBuffer(_diskDeltas[i, j].AsSpan(0, _diskDeltaSizes[i, j]), true);
 				}
 			}
 
@@ -329,9 +326,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 				_usedDiskTracks[i] = br.ReadByteBuffer(returnNull: false)!.ToBoolBuffer();
 				for (var j = 0; j < 84; j++)
 				{
-					var delta = _diskDeltas[i, j];
-					var newSize = br.ReadByteBuffer(delta.Buffer, returnNull: true) ?? 0;
-					_diskDeltas[i, j] = delta with { Size = newSize };
+					_diskDeltaSizes[i, j] = br.ReadByteBuffer(_diskDeltas[i, j], returnNull: true) ?? 0;
 				}
 			}
 
@@ -342,25 +337,22 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 		public void SaveDeltas()
 		{
-			var diskNum = _getCurrentDiskNumber();
-
 			_disk?.DeltaUpdate((trackNum, original, current) =>
 			{
-				var savedDelta = _diskDeltas[diskNum, trackNum];
-				var delta = DeltaSerializer.GetDelta<int>(original, current, savedDelta.Buffer);
-				_diskDeltas[diskNum, trackNum] = savedDelta with { Size = delta.Length };
+				var diskNum = _getCurrentDiskNumber();
+				var delta = DeltaSerializer.GetDelta<int>(original, current, _diskDeltas[_getCurrentDiskNumber(), trackNum]);
+				_diskDeltaSizes[diskNum, trackNum] = delta.Length;
 			});
 		}
 
 		public void LoadDeltas()
 		{
-			var diskNum = _getCurrentDiskNumber();
-
 			_disk?.DeltaUpdate((trackNum, original, current) =>
 			{
-				var delta = _diskDeltas[diskNum, trackNum];
-				if (delta.Size > 0)
-					DeltaSerializer.ApplyDelta<int>(original, current, delta.Buffer.AsSpan(0, delta.Size));
+				var diskNum = _getCurrentDiskNumber();
+				var delta = _diskDeltas[diskNum, trackNum].AsSpan(0, _diskDeltaSizes[diskNum, trackNum]);
+				if (delta.Length > 0)
+					DeltaSerializer.ApplyDelta<int>(original, current, delta);
 			});
 		}
 

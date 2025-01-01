@@ -1,7 +1,5 @@
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media
@@ -78,6 +76,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media
 			}
 			var result = new int[FluxEntriesPerTrack];
 			var lengthBits = (paddedLength * 8) - 7;
+			var offsets = new List<long>();
 			var remainingBits = lengthBits;
 
 			const long bitsNum = FluxEntriesPerTrack * FluxBitsPerEntry;
@@ -91,6 +90,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media
 					var offset = fluxBitOffset + ((i * 8 + j) * bitsNum / bitsDen);
 					var byteOffset = (int)(offset / FluxBitsPerEntry);
 					var bitOffset = (int)(offset % FluxBitsPerEntry);
+					offsets.Add(offset);
 					result[byteOffset] |= ((byteData & 0x80) != 0 ? 1 : 0) << bitOffset;
 					byteData <<= 1;
 					remainingBits--;
@@ -148,21 +148,13 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media
 		/// <param name="deltaUpdateCallback">callback</param>
 		public void DeltaUpdate(Action<int, int[], int[]> deltaUpdateCallback)
 		{
-			// This is made parallel particularly for disks with a large number of tracks.
-			// Worst case, this is called once per frame, and has to run a diff over 400kb
-			// per track.
-			//
-			// In the future, in addition to "used tracks" tracking, we should also track
-			// which tracks have changed since the last call.
-			
-			Parallel.ForEach(Partitioner.Create(0, _tracks.Length), range =>
+			for (var i = 0; i < _tracks.Length; i++)
 			{
-				for (var i = range.Item1; i < range.Item2; i++)
+				if (_usedTracks[i])
 				{
-					if (_usedTracks[i])
-						deltaUpdateCallback(i, _originalMedia[i], _tracks[i]);
+					deltaUpdateCallback(i, _originalMedia[i], _tracks[i]);
 				}
-			});
+			}
 		}
 
 		public int[] GetDataForTrack(int halftrack)

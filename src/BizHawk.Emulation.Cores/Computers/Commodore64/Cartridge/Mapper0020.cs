@@ -25,14 +25,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	{
 		private int _bankOffset = 63 << 13;
 
-		private readonly int[] _banksA = new int[64 << 13]; // 8000
-		private readonly int[] _banksB = new int[64 << 13]; // A000
+		private int[] _banksA = new int[64 << 13]; // 8000
+		private int[] _banksB = new int[64 << 13]; // A000
 
 		private readonly int[] _originalMediaA; // 8000
 		private readonly int[] _originalMediaB; // A000
-
-		private readonly byte[] _deltaA = new byte[64 * 0x2000];
-		private readonly byte[] _deltaB = new byte[64 * 0x2000];
 
 		private bool _boardLed;
 
@@ -102,8 +99,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			ser.Sync("CommandLatch55", ref _commandLatchAa);
 			ser.Sync("CommandLatchAA", ref _commandLatchAa);
 			ser.Sync("InternalROMState", ref _internalRomState);
-			ser.SyncDelta<int>("MediaStateA", _originalMediaA, _banksA, 0x2000, _deltaA);
-			ser.SyncDelta<int>("MediaStateB", _originalMediaB, _banksB, 0x2000, _deltaB);
+			ser.SyncDelta("MediaStateA", _originalMediaA, _banksA);
+			ser.SyncDelta("MediaStateB", _originalMediaB, _banksB);
 			DriveLightOn = _boardLed;
 		}
 
