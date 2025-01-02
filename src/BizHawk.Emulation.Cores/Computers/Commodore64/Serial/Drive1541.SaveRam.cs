@@ -34,6 +34,8 @@ public sealed partial class Drive1541 : ISaveRam
 				_diskDeltas[diskNumber][trackNumber] = Array.Empty<byte>();
 			}
 		}
+		
+		SaveRamModified = false;
 	}
 
 	public bool SaveRamModified { get; private set; } = false;
@@ -54,6 +56,7 @@ public sealed partial class Drive1541 : ISaveRam
 			}
 		}
 
+		SaveRamModified = false;
 		return ms.ToArray();
 	}
 
@@ -78,6 +81,7 @@ public sealed partial class Drive1541 : ISaveRam
 		}
 		
 		LoadDeltas();
+		SaveRamModified = false;
 	}
 
 	/// <summary>
@@ -115,6 +119,8 @@ public sealed partial class Drive1541 : ISaveRam
 
 			if (_dirtyDiskTracks[diskNumber][trackNumber])
 			{
+				SaveRamModified = true;
+
 				deltas[trackNumber] = isModified
 					? DeltaSerializer.GetDelta(track.Original, track.Bits).ToArray()
 					: Array.Empty<byte>();
@@ -122,8 +128,6 @@ public sealed partial class Drive1541 : ISaveRam
 				_dirtyDiskTracks[diskNumber][trackNumber] = false;
 			}
 		}
-
-		SaveRamModified = true;
 	}
 
 	/// <summary>
@@ -149,10 +153,12 @@ public sealed partial class Drive1541 : ISaveRam
 			else
 			{
 				DeltaSerializer.ApplyDelta(track.Original, track.Bits, delta);
+				SaveRamModified = true;
 			}
 			
 			_usedDiskTracks[diskNumber][trackNumber] = track.IsModified();
 			_dirtyDiskTracks[diskNumber][trackNumber] = false;
 		}
+		
 	}
 }
