@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.IO;
-using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media;
 
@@ -23,7 +22,7 @@ public sealed class DiskTrack
 	/// <summary>
 	/// Number of bits contained in a single value of the Bits array.
 	/// </summary>
-	private const int FluxBitsPerEntry = BytesPerEntry * 8;
+	public const int FluxBitsPerEntry = BytesPerEntry * 8;
 
 	/// <summary>
 	/// The number of flux transition bits stored for each track.
@@ -35,41 +34,18 @@ public sealed class DiskTrack
 	/// </summary>
 	private const int FluxEntriesPerTrack = FluxBitsPerTrack / FluxBitsPerEntry;
 
-	/// <summary>
-	/// The number of bytes contained in the cached delta, for use with save states.
-	/// </summary>
-	private const int DeltaBytesPerTrack = FluxEntriesPerTrack * BytesPerEntry + 4;
-
 	private int[] _bits = new int[FluxEntriesPerTrack];
 	private int[] _original = new int[FluxEntriesPerTrack];
-	private byte[] _delta = new byte[DeltaBytesPerTrack];
-	private bool _dirty = true;
-	private bool _modified = false;
 
 	/// <summary>
 	/// Current state of the disk, which may be changed from the original media. 
 	/// </summary>
-	public ReadOnlySpan<int> Bits => _bits;
+	public Span<int> Bits => _bits;
 
 	/// <summary>
 	/// Fixed state of the original media, from which deltas will be calculated.
 	/// </summary>
 	public ReadOnlySpan<int> Original => _original;
-
-	/// <summary>
-	/// The compressed difference between
-	/// </summary>
-	public byte[] Delta => _delta;
-
-	/// <summary>
-	/// If true, the delta needs to be recalculated.
-	/// </summary>
-	public bool IsDirty => _dirty;
-	
-	/// <summary>
-	/// If true, the track data has been modified.
-	/// </summary>
-	public bool IsModified => _modified;
 
 	/// <summary>
 	/// Create a clone of the DiskTrack.
@@ -86,87 +62,51 @@ public sealed class DiskTrack
 	}
 
 	/// <summary>
-	/// Prepare the <see cref="IsModified"/> property.
-	/// </summary>
-	/// <returns>
-	/// The new value of <see cref="IsModified"/>.
-	/// </returns>
-	private bool CheckModified()
-	{
-		_modified = false;
-
-		for (var i = 0; i < _original.Length; i++)
-		{
-			if (_original[i] == _bits[i])
-				continue;
-
-			_modified = true;
-			break;
-		}
-		
-		return _modified;
-	}
-
-	/// <summary>
-	/// Apply a compressed delta over the original media.
-	/// </summary>
-	/// <param name="delta">
-	/// Compressed delta data.
-	/// </param>
-	public void ApplyDelta(ReadOnlySpan<byte> delta)
-	{
-		DeltaSerializer.ApplyDelta<int>(_original, _bits, delta);
-		_delta = delta.ToArray();
-		_dirty = false;
-		CheckModified();
-	}
-
-	/// <summary>
-	/// Updates the delta for this track.
-	/// </summary>
-	/// <returns>
-	/// True if the delta has updated, false otherwise.
-	/// </returns>
-	public bool UpdateDelta()
-	{
-		if (!_dirty)
-			return false;
-
-		_delta = DeltaSerializer.GetDelta<int>(_original, _bits).ToArray();
-		_dirty = false;
-		return true;
-	}
-
-	/// <summary>
 	/// Resets this track to the state of the original media.
 	/// </summary>
 	public void Reset()
 	{
 		_original.CopyTo(_bits.AsSpan());
-		_delta = Array.Empty<byte>();
-		_dirty = false;
 	}
 
 	/// <summary>
-	/// Synchronize state.
+	/// Write an entry to <see cref="Bits"/>.
 	/// </summary>
-	/// <param name="ser">
-	/// Serializer with which to synchronize.
+	/// <param name="index">
+	/// Index of the entry to write.
 	/// </param>
-	public void SyncState(Serializer ser, string deltaId)
-	{
-		ser.Sync(deltaId, ref _delta, useNull: true);
-	}
-
-	public void Write(int index, int bits)
+	/// <param name="bits">
+	/// The new content of the entry.
+	/// </param>
+	/// <returns>
+	/// True only if data in <see cref="Bits"/> has been altered.
+	/// </returns>
+	public bool Write(int index, int bits)
 	{
 		// We only need to update delta if the bits actually changed.
 
 		if (_bits[index] == bits)
-			return;
+			return false;
 
 		_bits[index] = bits;
-		_dirty = true;
+		return true;
+	}
+
+	/// <summary>
+	/// Check to see if the original bits and current bits are equivalent.
+	/// </summary>
+	/// <returns>
+	/// True only if the content differs.
+	/// </returns>
+	public bool IsModified()
+	{
+		for (var i = 0; i < _original.Length; i++)
+		{
+			if (_original[i] != _bits[i])
+				return true;
+		}
+
+		return false;
 	}
 
 	public void ReadFromGCR(int density, ReadOnlySpan<byte> bytes, int fluxBitOffset)
@@ -236,6 +176,8 @@ public sealed class DiskTrack
 				break;
 			}
 		}
+		
+		_bits.CopyTo(_original.AsSpan());
 	}
 
 	public void ReadFromSaveRam(Stream stream)
