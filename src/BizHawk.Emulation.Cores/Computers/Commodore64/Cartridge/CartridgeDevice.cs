@@ -256,6 +256,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		{
 		}
 
+		public virtual IEnumerable<MemoryDomain> CreateMemoryDomains() => 
+			Array.Empty<MemoryDomain>();
+
 		private bool _driveLightEnabled;
 		private bool _driveLightOn;
 
