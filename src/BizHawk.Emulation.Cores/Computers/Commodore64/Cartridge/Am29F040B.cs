@@ -132,7 +132,6 @@ public class Am29F040B
 
 	public void Reset()
 	{
-		_data.AsSpan().Fill(0xFF);
 		_busyTimeRemaining = 0;
 		_status = 0;
 		_mode = Mode.Read;
