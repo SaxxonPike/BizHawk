@@ -104,7 +104,7 @@ public class Am29F040
 	
 	private int _status;
 	private bool _statusReady;
-	private int[] _data;
+	private readonly int[] _data = new int[ImageSize];
 	private Mode _mode;
 	private Sequence _sequence;
 
@@ -118,14 +118,23 @@ public class Am29F040
 			wordSize: 1
 		);
 
+	public void Reset()
+	{
+		_data.AsSpan().Fill(0xFF);
+		_statusReady = false;
+		_status = 0;
+		_mode = Mode.Read;
+		_sequence = Sequence.None;
+	}
+
 	public Span<int> Data =>
 		_data.AsSpan();
 
 	public int Peek(int addr) =>
 		_data[addr & ImageMask] & 0xFF;
 
-	public int Poke(int addr) =>
-		_data[addr & ImageMask] = addr & 0xFF;
+	public int Poke(int addr, int val) =>
+		_data[addr & ImageMask] = val & 0xFF;
 	
 	public int Read(int addr)
 	{
@@ -162,7 +171,7 @@ public class Am29F040
 
 	public void Write(int addr, int data)
 	{
-		switch (_mode, _sequence, addr, data)
+		switch (_mode, _sequence, addr & 0x1FFF, data)
 		{
 			case (Mode.Write, _, _, _):
 			{
@@ -173,24 +182,24 @@ public class Am29F040
 				_sequence = Sequence.None;
 				break;
 			}
-			case (_, _, 0x5555, 0xAA):
+			case (_, _, 0x0555, 0xAA):
 			{
 				_statusReady = false;
 				_sequence = Sequence.Start;
 				break;
 			}
-			case (_, Sequence.Start, 0x2AAA, 0x55):
+			case (_, Sequence.Start, 0x02AA, 0x55):
 			{
 				_sequence = Sequence.Complete;
 				break;
 			}
-			case (_, Sequence.Complete, 0x5555, 0x80):
+			case (_, Sequence.Complete, 0x0555, 0x80):
 			{
 				_sequence = Sequence.None;
 				_mode = Mode.Erase;
 				break;
 			}
-			case (Mode.Erase, Sequence.Complete, 0x5555, 0x10):
+			case (Mode.Erase, Sequence.Complete, 0x0555, 0x10):
 			{
 				_sequence = Sequence.None;
 				_data.AsSpan().Fill(0xFF);
@@ -205,7 +214,7 @@ public class Am29F040
 				_statusReady = true;
 				break;
 			}
-			case (Mode.Read, Sequence.Complete, 0x5555, 0x90):
+			case (Mode.Read, Sequence.Complete, 0x0555, 0x90):
 			{
 				_sequence = Sequence.None;
 				_statusReady = true;
@@ -213,7 +222,7 @@ public class Am29F040
 				_status = 0;
 				break;
 			}
-			case (Mode.Read, Sequence.Complete, 0x5555, 0xA0):
+			case (Mode.Read, Sequence.Complete, 0x0555, 0xA0):
 			{
 				_mode = Mode.Write;
 				break;

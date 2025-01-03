@@ -35,33 +35,23 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	/// </remarks>
 	internal sealed class Mapper0020 : CartridgeDevice, ISaveRam
 	{
-		private int _bankOffset = 63 << 13;
-
-		private int[] _banksA = new int[64 << 13]; // 8000
-		private int[] _banksB = new int[64 << 13]; // A000
-
 		private readonly int[] _originalMediaA; // 8000
 		private readonly int[] _originalMediaB; // A000
 
 		private byte[] _deltaA; // 8000
 		private byte[] _deltaB; // A000
+
+		private Am29F040 _chipA = new();
+		private Am29F040 _chipB = new();
 		
 		private bool _bankDeltaDirty;
 		private bool _saveRamDirty;
 
 		private bool _boardLed;
-
 		private bool _jumper;
-
 		private int _stateBits;
 
 		private int[] _ram = new int[256];
-
-		private bool _commandLatch55;
-		private bool _commandLatchAa;
-
-		private int _internalRomState;
-		private bool _eraseMode;
 		private int _bankNumber;
 
 		public Mapper0020(IList<int> newAddresses, IList<int> newBanks, IList<int[]> newData)
@@ -74,24 +64,17 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			pinGame = false;
 			pinExRom = true;
 
-			// for safety, initialize all banks to dummy
-			for (var i = 0; i < 64 * 0x2000; i++)
-			{
-				_banksA[i] = 0xFF;
-				_banksB[i] = 0xFF;
-			}
-
 			// load in all banks
 			for (var i = 0; i < count; i++)
 			{
 				switch (newAddresses[i])
 				{
 					case 0x8000:
-						Array.Copy(newData[i], 0, _banksA, newBanks[i] * 0x2000, 0x2000);
+						newData[i].AsSpan().CopyTo(_chipA.Data.Slice(newBanks[i] * 0x2000, 0x2000));
 						break;
 					case 0xA000:
 					case 0xE000:
-						Array.Copy(newData[i], 0, _banksB, newBanks[i] * 0x2000, 0x2000);
+						newData[i].AsSpan().CopyTo(_chipB.Data.Slice(newBanks[i] * 0x2000, 0x2000));
 						break;
 				}
 			}
@@ -99,14 +82,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			// default to bank 0
 			BankSet(0);
 
-			// internal operation settings
-			_commandLatch55 = false;
-			_commandLatchAa = false;
-			_internalRomState = 0;
-
 			// back up original media
-			_originalMediaA = _banksA.Select(d => d).ToArray();
-			_originalMediaB = _banksB.Select(d => d).ToArray();
+			_originalMediaA = _chipA.Data.ToArray();
+			_originalMediaB = _chipB.Data.ToArray();
 		}
 
 		private void FlushSaveRam()
@@ -114,8 +92,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			if (!_bankDeltaDirty)
 				return;
 			
-			_deltaA = DeltaSerializer.GetDelta<int>(_originalMediaA, _banksA).ToArray();
-			_deltaB = DeltaSerializer.GetDelta<int>(_originalMediaB, _banksB).ToArray();
+			_deltaA = DeltaSerializer.GetDelta<int>(_originalMediaA, _chipA.Data).ToArray();
+			_deltaB = DeltaSerializer.GetDelta<int>(_originalMediaB, _chipB.Data).ToArray();
 			_bankDeltaDirty = false;
 		}
 
@@ -124,43 +102,35 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			if (!ser.IsReader && _bankDeltaDirty)
 				FlushSaveRam();
 
-			ser.Sync("BankOffset", ref _bankOffset);
+			ser.Sync("BankNumber", ref _bankNumber);
 			ser.Sync("BoardLed", ref _boardLed);
 			ser.Sync("Jumper", ref _jumper);
 			ser.Sync("StateBits", ref _stateBits);
 			ser.Sync("RAM", ref _ram, useNull: false);
-			ser.Sync("CommandLatch55", ref _commandLatchAa);
-			ser.Sync("CommandLatchAA", ref _commandLatchAa);
-			ser.Sync("InternalROMState", ref _internalRomState);
 			ser.Sync("MediaStateA", ref _deltaA, useNull: false);
 			ser.Sync("MediaStateB", ref _deltaB, useNull: false);
 
 			if (ser.IsReader)
 			{
-				DeltaSerializer.ApplyDelta<int>(_originalMediaA, _banksA, _deltaA);
-				DeltaSerializer.ApplyDelta<int>(_originalMediaB, _banksB, _deltaB);
+				DeltaSerializer.ApplyDelta<int>(_originalMediaA, _chipA.Data, _deltaA);
+				DeltaSerializer.ApplyDelta<int>(_originalMediaB, _chipB.Data, _deltaB);
 				_bankDeltaDirty = false;
 			}
 			
 			DriveLightOn = _boardLed;
 		}
 
-		private void BankSet(int index)
-		{
-			_bankOffset = (index & 0x3F) << 13;
-		}
+		private int CalculateBankOffset(int addr) => 
+			(addr & 0x1FFF) | (_bankNumber << 13);
+		
+		private void BankSet(int index) => 
+			_bankNumber = index;
 
-		public override int Peek8000(int addr)
-		{
-			addr &= 0x1FFF;
-			return _banksA[addr | _bankOffset];
-		}
+		public override int Peek8000(int addr) => 
+			_chipA.Peek(CalculateBankOffset(addr));
 
-		public override int PeekA000(int addr)
-		{
-			addr &= 0x1FFF;
-			return _banksB[addr | _bankOffset];
-		}
+		public override int PeekA000(int addr) => 
+			_chipB.Peek(CalculateBankOffset(addr));
 
 		public override int PeekDE00(int addr)
 		{
@@ -168,8 +138,14 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			// but Peek is provided here for debug reasons
 			// and may not stay around
 			addr &= 0x02;
-			return addr == 0x00 ? _bankOffset >> 13 : _stateBits;
+			return addr == 0x00 ? _bankNumber : _stateBits;
 		}
+
+		public override void Poke8000(int addr, int val) =>
+			_chipA.Poke(addr, val);
+		
+		public override void PokeA000(int addr, int val) =>
+			_chipB.Poke(addr, val);
 
 		public override int PeekDF00(int addr)
 		{
@@ -196,47 +172,16 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			_ram[addr] = val & 0xFF;
 		}
 
-		public override int Read8000(int addr)
-		{
-			return ReadInternal(addr & 0x1FFF, _banksA);
-		}
+		public override int Read8000(int addr) => 
+			_chipA.Read(CalculateBankOffset(addr));
 
-		public override int ReadA000(int addr)
-		{
-			return ReadInternal(addr & 0x1FFF, _banksB);
-		}
+		public override int ReadA000(int addr) =>
+			_chipB.Read(CalculateBankOffset(addr));
 
 		public override int ReadDF00(int addr)
 		{
 			addr &= 0xFF;
 			return _ram[addr];
-		}
-
-		private int ReadInternal(int addr, int[] bank)
-		{
-			switch (_internalRomState)
-			{
-				case 0x80:
-					break;
-				case 0x90:
-					switch (addr & 0x1FFF)
-					{
-						case 0x0000:
-							return 0x01;
-						case 0x0001:
-							return 0xA4;
-						case 0x0002:
-							return 0x00;
-					}
-
-					break;
-				case 0xA0:
-					break;
-				case 0xF0:
-					break;
-			}
-
-			return bank[addr | _bankOffset];
 		}
 
 		private void StateSet(int val)
@@ -253,118 +198,23 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 			pinExRom = (val & 0x02) == 0;
 			_boardLed = (val & 0x80) != 0;
-			_internalRomState = 0;
 			DriveLightOn = _boardLed;
-		}
-
-		private void FlashCommandReset()
-		{
-			_internalRomState = 0xF0;
-			_commandLatch55 = false;
-			_commandLatchAa = false;
-		}
-
-		private void FlashCommandWrite(int addr, int val)
-		{
-			if (addr == 0x0555) // $8555
-			{
-				if (!_commandLatchAa)
-				{
-					if (val == 0xAA)
-					{
-						_commandLatch55 = true;
-					}
-				}
-				else
-				{
-					// process EZF command
-					_internalRomState = val;
-				}
-			}
-			else if (addr == 0x02AA) // $82AA
-			{
-				if (_commandLatch55 && val == 0x55)
-				{
-					_commandLatchAa = true;
-				}
-				else
-				{
-					_commandLatch55 = false;
-				}
-			}
-			else
-			{
-				_commandLatch55 = false;
-				_commandLatchAa = false;
-			}			
 		}
 
 		public override void Write8000(int addr, int val)
 		{
-			WriteInternal(addr, val & 0x1FFF, _banksA, flashCommandEnable: true);
+			if (pinGame || !pinExRom)
+				return;
+
+			_chipA.Write(CalculateBankOffset(addr), val);
 		}
 
 		public override void WriteA000(int addr, int val)
 		{
-			WriteInternal(addr, val & 0x1FFF, _banksB, flashCommandEnable: false);
-		}
-
-		private void WriteInternal(int addr, int val, int[] bank, bool flashCommandEnable)
-		{
 			if (pinGame || !pinExRom)
-			{
 				return;
-			}
 
-			if (val == 0xF0) // any address, resets flash
-			{
-				FlashCommandReset();
-			}
-			else if (_internalRomState != 0x00 && _internalRomState != 0xF0)
-			{
-				switch (_internalRomState)
-				{
-					case 0x10:
-						if (_eraseMode)
-						{
-							_banksA.AsSpan().Fill(0xFF);
-							_banksB.AsSpan().Fill(0xFF);
-							_bankDeltaDirty = true;
-							_saveRamDirty = true;
-						}
-
-						FlashCommandReset();
-						break;
-					case 0x30:
-						if (_eraseMode)
-						{
-							var sector = _bankOffset;
-							for (var i = 0; i < 8; i++)
-							{
-								bank.AsSpan(sector & ((64 << 13) - 1)).Fill(0xFF);
-								sector += 0x2000;
-							}
-						}
-						
-						FlashCommandReset();
-						break;
-					case 0x80:
-						_eraseMode = true;
-						break;
-					case 0xA0:
-						bank[(addr & 0x1FFF) | _bankOffset] &= val;
-						_bankDeltaDirty = true;
-						_saveRamDirty = true;
-
-						// Device is reset to read/reset mode after write.
-						FlashCommandReset();
-						break;
-				}
-			}
-			else if (flashCommandEnable)
-			{
-				FlashCommandWrite(addr & 0x1FFF, val);
-			}
+			_chipB.Write(CalculateBankOffset(addr), val);
 		}
 
 		public override void WriteDE00(int addr, int val)
@@ -385,34 +235,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			_ram[addr] = val & 0xFF;
 		}
 
-		private (int[] Bank, int Index) TranslateDomainAddress(int addr)
-		{
-			var bankNumber = addr >> 14;
-			var bankData = (addr & 0x2000) == 0 ? _banksA : _banksB;
-			var index = (addr & 0x1FFF) + (bankNumber << 13);
-
-			return (Bank: bankData, Index: index);
-		}
-
 		public override IEnumerable<MemoryDomain> CreateMemoryDomains()
 		{
-			yield return new MemoryDomainDelegate(
-				name: "EF ROM",
-				size: 0x2000 * 2 * 64,
-				endian: MemoryDomain.Endian.Little,
-				peek: addr =>
-				{
-					var (data, i) = TranslateDomainAddress(unchecked((int) addr));
-					return unchecked((byte) data[i]);
-				},
-				poke: (addr, val) =>
-				{
-					var (data, i) = TranslateDomainAddress(unchecked((int) addr));
-					data[i] = val;
-				},
-				wordSize: 1
-			);
-
+			yield return _chipA.CreateMemoryDomain("EF LoROM");
+			yield return _chipB.CreateMemoryDomain("EF HiROM");
+			
 			yield return new MemoryDomainDelegate(
 				name: "EF RAM",
 				size: _ram.Length,
@@ -450,8 +277,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			var deltaBSize = reader.ReadInt32();
 			_deltaB = reader.ReadBytes(deltaBSize);
 
-			DeltaSerializer.ApplyDelta<int>(_originalMediaA, _banksA, _deltaA);
-			DeltaSerializer.ApplyDelta<int>(_originalMediaB, _banksB, _deltaB);
+			DeltaSerializer.ApplyDelta<int>(_originalMediaA, _chipA.Data, _deltaA);
+			DeltaSerializer.ApplyDelta<int>(_originalMediaB, _chipB.Data, _deltaB);
 			_saveRamDirty = false;
 		}
 
