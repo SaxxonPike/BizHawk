@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.IO;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media;
 
