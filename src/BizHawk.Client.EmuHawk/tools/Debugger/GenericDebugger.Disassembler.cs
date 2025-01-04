@@ -48,17 +48,14 @@ namespace BizHawk.Client.EmuHawk
 			if (CanDisassemble)
 			{
 				Disassemble();
-				SetDisassemblerItemCount();
 			}
 		}
 		
 		private void Disassemble()
 		{
-			int lineCount = DisassemblerView.RowCount * 6 + 2;
-
 			_disassemblyLines.Clear();
 			uint currentAddress = _currentDisassemblerAddress;
-			for (int i = 0; i <= lineCount; ++i)
+			for (int i = 0; i <= DisassemblerView.RowCount; ++i)
 			{
 				if (currentAddress >= BusMaxValue)
 				{
@@ -145,10 +142,7 @@ namespace BizHawk.Client.EmuHawk
 		private void DisassemblerView_SizeChanged(object sender, EventArgs e)
 		{
 			SetDisassemblerItemCount();
-			if (CanDisassemble)
-			{
-				Disassemble();
-			}
+			UpdateDisassembler();
 		}
 
 		private void SmallIncrement()
@@ -202,11 +196,6 @@ namespace BizHawk.Client.EmuHawk
 				blob.AppendFormat("{0} {1}\n", line.Address.ToHexString(_pcRegisterSize), line.Mnemonic);
 			}
 			Clipboard.SetDataObject(blob.ToString());
-		}
-
-		private void OnPauseChanged(bool isPaused)
-		{
-			if (isPaused) FullUpdate();
 		}
 
 		private void DisassemblerContextMenu_Opening(object sender, EventArgs e)
