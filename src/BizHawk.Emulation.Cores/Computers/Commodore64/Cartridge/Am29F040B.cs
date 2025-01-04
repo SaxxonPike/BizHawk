@@ -19,14 +19,14 @@ public class Am29F040B
 	private const int SectorMask = SectorSize - 1;
 	private const int RegisterMask = (1 << 11) - 1;
 
-	private const int ToggleBit2 = 1 << 2;
-	private const int ErrorBit = 1 << 5;
-	private const int ToggleBit = 1 << 6;
-	private const int PollingBit = 1 << 7;
-	private const int EraseBit = 1 << 3;
+	private const byte ToggleBit2 = 1 << 2;
+	private const byte ErrorBit = 1 << 5;
+	private const byte ToggleBit = 1 << 6;
+	private const byte PollingBit = 1 << 7;
+	private const byte EraseBit = 1 << 3;
 
 	private const int WriteLatency = 7;
-	private const int EraseSectorLatency = 1;
+	private const int EraseSectorLatency = 1000000;
 	private const int EraseChipLatency = 8000000;
 	private const int EraseValue = 0xFF;
 
@@ -66,7 +66,7 @@ public class Am29F040B
 
 	private int _busyTimeRemaining;
 	private int _status;
-	private int[] _data = new int[ImageSize];
+	private byte[] _data = new byte[ImageSize];
 	private Mode _mode;
 	private Sequence _sequence;
 	private bool _returnStatus;
@@ -141,7 +141,7 @@ public class Am29F040B
 		_endAddress = ImageMask;
 	}
 
-	public Span<int> Data =>
+	public Span<byte> Data =>
 		_data.AsSpan();
 
 	public int Peek(int addr) =>
@@ -151,7 +151,7 @@ public class Am29F040B
 	{
 		var newData = val & 0xFF;
 		_dataDirty |= _data[addr & ImageMask] != newData;
-		return _data[addr & ImageMask] = newData;
+		return _data[addr & ImageMask] = unchecked((byte)newData);
 	}
 
 	// From the datasheet:
@@ -219,7 +219,7 @@ public class Am29F040B
 				var newData = originalData & data & 0xFF;
 				_dataDirty |= newData != originalData;
 				_errorPending = data != newData;
-				_data[addr & ImageMask] = newData;
+				_data[addr & ImageMask] = unchecked((byte)newData);
 				_busyTimeRemaining = WriteLatency; // 7-30us
 				_status = (data & 0x80) ^ PollingBit;
 				_returnStatus = true;
@@ -265,7 +265,7 @@ public class Am29F040B
 				if (_busyTimeRemaining > 0)
 					break;
 
-				_busyTimeRemaining = 1000000; // ~1sec 
+				_busyTimeRemaining = EraseSectorLatency; // ~1sec 
 				_data.AsSpan(addr & ~SectorMask, SectorSize).Fill(0xFF);
 				_dataDirty = true;
 				_returnStatus = true;

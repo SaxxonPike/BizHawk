@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using BizHawk.Common;
 using BizHawk.Emulation.Common;
 
@@ -34,8 +35,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	/// </remarks>
 	internal sealed class Mapper0020 : CartridgeDevice, ISaveRam
 	{
-		private readonly int[] _originalMediaA; // 8000
-		private readonly int[] _originalMediaB; // A000
+		private readonly byte[] _originalMediaA; // 8000
+		private readonly byte[] _originalMediaB; // A000
 
 		private byte[] _deltaA; // 8000
 		private byte[] _deltaB; // A000
@@ -68,11 +69,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 				switch (newAddresses[i])
 				{
 					case 0x8000:
-						newData[i].AsSpan().CopyTo(_chipA.Data.Slice(newBanks[i] * 0x2000, 0x2000));
+						newData[i].Select(b => unchecked((byte)b)).ToArray().CopyTo(_chipA.Data.Slice(newBanks[i] * 0x2000, 0x2000));
 						break;
 					case 0xA000:
 					case 0xE000:
-						newData[i].AsSpan().CopyTo(_chipB.Data.Slice(newBanks[i] * 0x2000, 0x2000));
+						newData[i].Select(b => unchecked((byte)b)).ToArray().CopyTo(_chipB.Data.Slice(newBanks[i] * 0x2000, 0x2000));
 						break;
 				}
 			}
@@ -89,15 +90,16 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		{
 			_chipA.Reset();
 			_chipB.Reset();
+			base.HardReset();
 		}
 
 		private void FlushSaveRam()
 		{
 			if (_chipA.CheckDataDirty() || _deltaA == null)
-				_deltaA = DeltaSerializer.GetDelta<int>(_originalMediaA, _chipA.Data).ToArray();
+				_deltaA = DeltaSerializer.GetDelta<byte>(_originalMediaA, _chipA.Data).ToArray();
 			
 			if (_chipB.CheckDataDirty() || _deltaB == null)
-				_deltaB = DeltaSerializer.GetDelta<int>(_originalMediaB, _chipB.Data).ToArray();
+				_deltaB = DeltaSerializer.GetDelta<byte>(_originalMediaB, _chipB.Data).ToArray();
 
 			_saveRamDirty = false;
 		}
@@ -105,13 +107,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		protected override void SyncStateInternal(Serializer ser)
 		{
 			if (!ser.IsReader)
-			{
-				if (_chipA.CheckDataDirty() || _deltaA == null)
-					_deltaA = DeltaSerializer.GetDelta<int>(_originalMediaA, _chipA.Data).ToArray();
-
-				if (_chipB.CheckDataDirty() || _deltaB == null)
-					_deltaB = DeltaSerializer.GetDelta<int>(_originalMediaB, _chipB.Data).ToArray();
-			}
+				FlushSaveRam();
 
 			ser.Sync("BankNumber", ref _bankNumber);
 			ser.Sync("BoardLed", ref _boardLed);
@@ -132,10 +128,10 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			if (ser.IsReader)
 			{
 				if (_deltaA != null)
-					DeltaSerializer.ApplyDelta<int>(_originalMediaA, _chipA.Data, _deltaA);
+					DeltaSerializer.ApplyDelta(_originalMediaA, _chipA.Data, _deltaA);
 				
 				if (_deltaB != null)
-					DeltaSerializer.ApplyDelta<int>(_originalMediaB, _chipB.Data, _deltaB);
+					DeltaSerializer.ApplyDelta(_originalMediaB, _chipB.Data, _deltaB);
 			}
 			
 			DriveLightOn = _boardLed;
@@ -302,8 +298,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			var deltaBSize = reader.ReadInt32();
 			_deltaB = reader.ReadBytes(deltaBSize);
 
-			DeltaSerializer.ApplyDelta<int>(_originalMediaA, _chipA.Data, _deltaA);
-			DeltaSerializer.ApplyDelta<int>(_originalMediaB, _chipB.Data, _deltaB);
+			DeltaSerializer.ApplyDelta(_originalMediaA, _chipA.Data, _deltaA);
+			DeltaSerializer.ApplyDelta(_originalMediaB, _chipB.Data, _deltaB);
 			_saveRamDirty = false;
 		}
 
