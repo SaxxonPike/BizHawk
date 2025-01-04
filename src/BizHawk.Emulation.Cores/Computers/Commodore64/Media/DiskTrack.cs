@@ -179,14 +179,4 @@ public sealed class DiskTrack
 		
 		_bits.CopyTo(_original.AsSpan());
 	}
-
-	public void ReadFromSaveRam(Stream stream)
-	{
-		
-	}
-
-	public void WriteToSaveRam(Stream stream)
-	{
-		
-	}
 }
