@@ -74,14 +74,13 @@ public class Am29F040B
 	private int _endAddress;
 	private bool _errorPending;
 	private bool _dataDirty;
-	
+
 	public MemoryDomain CreateMemoryDomain(string name) =>
-		new MemoryDomainDelegate(
+		new MemoryDomainByteArray(
 			name: name,
-			size: ImageSize,
 			endian: MemoryDomain.Endian.Little,
-			peek: a => unchecked((byte) _data[a]),
-			poke: (a, d) => _data[a] = d,
+			data: _data,
+			writable: true,
 			wordSize: 1
 		);
 

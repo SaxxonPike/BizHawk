@@ -50,13 +50,13 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		private bool _jumper;
 		private int _stateBits;
 
-		private int[] _ram = new int[256];
+		private byte[] _ram = new byte[256];
 		private int _bankNumber;
 
-		public Mapper0020(IList<int> newAddresses, IList<int> newBanks, IList<int[]> newData)
+		public Mapper0020(IReadOnlyList<CartridgeChip> chips)
 		{
 			DriveLightEnabled = true;
-			var count = newAddresses.Count;
+			var count = chips.Count;
 
 			// force ultimax mode (the cart SHOULD set this
 			// otherwise on load, according to the docs)
@@ -64,16 +64,20 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			pinExRom = true;
 
 			// load in all banks
-			for (var i = 0; i < count; i++)
+			foreach (var chip in chips)
 			{
-				switch (newAddresses[i])
+				switch (chip.Address)
 				{
 					case 0x8000:
-						newData[i].Select(b => unchecked((byte)b)).ToArray().CopyTo(_chipA.Data.Slice(newBanks[i] * 0x2000, 0x2000));
+						chip.Data.Select(b => unchecked((byte)b))
+							.ToArray()
+							.CopyTo(_chipA.Data.Slice(chip.Bank * 0x2000, 0x2000));
 						break;
 					case 0xA000:
 					case 0xE000:
-						newData[i].Select(b => unchecked((byte)b)).ToArray().CopyTo(_chipB.Data.Slice(newBanks[i] * 0x2000, 0x2000));
+						chip.Data.Select(b => unchecked((byte)b))
+							.ToArray()
+							.CopyTo(_chipB.Data.Slice(chip.Bank * 0x2000, 0x2000));
 						break;
 				}
 			}
@@ -183,7 +187,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		public override void PokeDF00(int addr, int val)
 		{
 			addr &= 0xFF;
-			_ram[addr] = val & 0xFF;
+			_ram[addr] = unchecked((byte)val);
 		}
 
 		public override int Read8000(int addr) => 
@@ -246,7 +250,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		public override void WriteDF00(int addr, int val)
 		{
-			_ram[addr] = val & 0xFF;
+			_ram[addr] = unchecked((byte)val);
 		}
 
 		public override void ExecutePhase()
@@ -260,13 +264,12 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		{
 			yield return _chipA.CreateMemoryDomain("EF LoROM");
 			yield return _chipB.CreateMemoryDomain("EF HiROM");
-			
-			yield return new MemoryDomainDelegate(
+
+			yield return new MemoryDomainByteArray(
 				name: "EF RAM",
-				size: _ram.Length,
 				endian: MemoryDomain.Endian.Little,
-				peek: a => unchecked((byte) _ram[a]),
-				poke: (a, d) => _ram[a] = d,
+				data: _ram,
+				writable: true,
 				wordSize: 1
 			);
 		}
@@ -288,6 +291,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			return result.ToArray();
 		}
 
+		/// <summary>
+		/// Applies a SaveRam block to the flash memory.
+		/// </summary>
 		public void StoreSaveRam(byte[] data)
 		{
 			using var stream = new MemoryStream(data);
