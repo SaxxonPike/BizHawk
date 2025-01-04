@@ -141,6 +141,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		protected bool pinNMI;
 
+		protected bool pinDMA;
+
 		protected bool pinReset;
 
 		protected bool validCartridge;

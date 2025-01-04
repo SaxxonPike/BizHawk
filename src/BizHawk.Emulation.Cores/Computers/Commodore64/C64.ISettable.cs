@@ -89,6 +89,14 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 				"1541 - II: Improved model with some ROM bugfixes.")]
 			[DefaultValue(DiskDriveType.None)]
 			public DiskDriveType DiskDriveType { get; set; }
+			
+			[DisplayName("RAM expansion type")]
+			[Description("Set the type of memory expansion cartridge attached (incompatible with other cartridges)\n" +
+				"None: Default configuration.\n" +
+				"REU128kb: Equivalent to Commodore REU1700.\n" +
+				"REU256kb: Equivalent to Commodore REU1764.\n" +
+				"REU512kb: Equivalent to Commodore REU1750.")]
+			public RamExpansionType RamExpansionType { get; set; }
 
 			public C64SyncSettings Clone()
 			{
@@ -129,6 +137,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 		public enum DiskDriveType
 		{
 			None, Commodore1541, Commodore1541II
+		}
+
+		public enum RamExpansionType
+		{
+			None, REU128kb, REU256kb, REU512kb
 		}
 	}
 }

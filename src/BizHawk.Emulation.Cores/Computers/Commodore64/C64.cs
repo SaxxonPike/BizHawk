@@ -25,7 +25,15 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 			_currentDisk = 0;
 			RomSanityCheck();
 
-			Init(SyncSettings.VicType, Settings.BorderType, SyncSettings.SidType, SyncSettings.TapeDriveType, SyncSettings.DiskDriveType);
+			Init(
+				SyncSettings.VicType, 
+				Settings.BorderType,
+				SyncSettings.SidType,
+				SyncSettings.TapeDriveType,
+				SyncSettings.DiskDriveType,
+				SyncSettings.RamExpansionType
+			);
+
 			_cyclesPerFrame = _board.Vic.CyclesPerFrame;
 			_memoryCallbacks = new MemoryCallbackSystem(new[] { "System Bus" });
 
@@ -258,7 +266,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 			return result;
 		}
 
-		private void Init(VicType initRegion, BorderType borderType, SidType sidType, TapeDriveType tapeDriveType, DiskDriveType diskDriveType)
+		private void Init(VicType initRegion, BorderType borderType, SidType sidType, TapeDriveType tapeDriveType, DiskDriveType diskDriveType, RamExpansionType ramExpansionType)
 		{
 			// Force certain drive types to be available depending on ROM type
 			var rom = _roms[0];
@@ -303,6 +311,21 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 
 			_board = new Motherboard(this, initRegion, borderType, sidType, tapeDriveType, diskDriveType);
 			InitRoms(diskDriveType);
+			
+			// REU may be combined with other media types such as tape/disk (but not other cartridges)
+			if (!_board.CartPort.IsConnected)
+			{
+				switch (ramExpansionType)
+				{
+					case RamExpansionType.REU128kb:
+						break;
+					case RamExpansionType.REU256kb:
+						break;
+					case RamExpansionType.REU512kb:
+						break;
+				}
+			}
+			
 			_board.Init();
 		}
 
