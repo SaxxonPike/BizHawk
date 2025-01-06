@@ -21,8 +21,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 				http://mail.lipsia.de/~enigma/neu/6581.html
 		*/
 
-		public Func<int, int> ReadColorRam;
-		public Func<int, int> ReadMemory;
+		public Func<ushort, byte> ReadColorRam;
+		public Func<ushort, byte> ReadMemory;
 
 		public bool ReadAec() { return _pinAec; }
 		public bool ReadBa() { return _pinBa; }

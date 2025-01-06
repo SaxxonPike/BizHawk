@@ -2,17 +2,17 @@
 {
 	public sealed partial class Via
 	{
-		public int Peek(int addr)
+		public byte Peek(ushort addr)
 		{
-			return ReadRegister(addr & 0xF);
+			return ReadRegister(addr);
 		}
 
-		public void Poke(int addr, int val)
+		public void Poke(ushort addr, byte val)
 		{
-			WriteRegister(addr & 0xF, val);
+			WriteRegister(addr, val);
 		}
 
-		public int Read(int addr)
+		public byte Read(ushort addr)
 		{
 			addr &= 0xF;
 			switch (addr)
@@ -50,7 +50,7 @@
 			return ReadRegister(addr);
 		}
 
-		private int ReadRegister(int addr)
+		private byte ReadRegister(ushort addr)
 		{
 			switch (addr)
 			{
@@ -64,17 +64,17 @@
 				case 0x3:
 					return _ddra;
 				case 0x4:
-					return _t1C & 0xFF;
+					return unchecked((byte)_t1C);
 				case 0x5:
-					return (_t1C >> 8) & 0xFF;
+					return unchecked((byte)(_t1C >> 8));
 				case 0x6:
-					return _t1L & 0xFF;
+					return unchecked((byte)_t1L);
 				case 0x7:
-					return (_t1L >> 8) & 0xFF;
+					return unchecked((byte) (_t1L >> 8));
 				case 0x8:
-					return _t2C & 0xFF;
+					return unchecked((byte)_t2C);
 				case 0x9:
-					return (_t2C >> 8) & 0xFF;
+					return unchecked((byte) (_t2C >> 8));
 				case 0xA:
 					return _sr;
 				case 0xB:
@@ -84,13 +84,13 @@
 				case 0xD:
 					return _ifr;
 				case 0xE:
-					return _ier | 0x80;
+					return unchecked((byte) (_ier | 0x80));
 			}
 
 			return 0xFF;
 		}
 
-		public void Write(int addr, int val)
+		public void Write(ushort addr, byte val)
 		{
 			addr &= 0xF;
 			switch (addr)
@@ -145,13 +145,13 @@
 					WriteRegister(addr, val);
 					break;
 				case 0xD:
-					_ifr &= ~val;
+					_ifr &= unchecked((byte)(~val));
 					break;
 				case 0xE:
 					if ((val & 0x80) != 0)
-						_ier |= val & 0x7F;
+						_ier |= unchecked((byte) (val & 0x7F));
 					else
-						_ier &= ~val;
+						_ier &= unchecked((byte) ~val);
 					break;
 				default:
 					WriteRegister(addr, val);
@@ -159,47 +159,47 @@
 			}
 		}
 
-		private void WriteRegister(int addr, int val)
+		private void WriteRegister(ushort addr, byte val)
 		{
 			addr &= 0xF;
 			switch (addr)
 			{
 				case 0x0:
-					_prb = val & 0xFF;
+					_prb = val;
 					break;
 				case 0x1:
 				case 0xF:
-					_pra = val & 0xFF;
+					_pra = val;
 					break;
 				case 0x2:
-					_ddrb = val & 0xFF;
+					_ddrb = val;
 					break;
 				case 0x3:
-					_ddra = val & 0xFF;
+					_ddra = val;
 					break;
 				case 0x4:
-					_t1C = (_t1C & 0xFF00) | (val & 0xFF);
+					_t1C = (_t1C & 0xFF00) | val;
 					break;
 				case 0x5:
-					_t1C = (_t1C & 0xFF) | ((val & 0xFF) << 8);
+					_t1C = (_t1C & 0xFF) | (val << 8);
 					break;
 				case 0x6:
-					_t1L = (_t1L & 0xFF00) | (val & 0xFF);
+					_t1L = (_t1L & 0xFF00) | val;
 					break;
 				case 0x7:
-					_t1L = (_t1L & 0xFF) | ((val & 0xFF) << 8);
+					_t1L = (_t1L & 0xFF) | (val << 8);
 					break;
 				case 0x8:
-					_t2C = (_t2C & 0xFF00) | (val & 0xFF);
+					_t2C = (_t2C & 0xFF00) | val;
 					break;
 				case 0x9:
-					_t2C = (_t2C & 0xFF) | ((val & 0xFF) << 8);
+					_t2C = (_t2C & 0xFF) | (val << 8);
 					break;
 				case 0xA:
-					_sr = val & 0xFF;
+					_sr = val;
 					break;
 				case 0xB:
-					_acr = val & 0xFF;
+					_acr = val;
 					_acrPaLatchEnable = (val & 0x01) != 0;
 					_acrPbLatchEnable = (val & 0x02) != 0;
 					_acrSrControl = (val & 0x1C);
@@ -207,35 +207,35 @@
 					_acrT1Control = (val & 0xC0);
 					break;
 				case 0xC:
-					_pcr = val & 0xFF;
+					_pcr = val;
 					_pcrCa1IntControl = _pcr & 0x01;
 					_pcrCa2Control = _pcr & 0x0E;
 					_pcrCb1IntControl = (_pcr & 0x10) >> 4;
 					_pcrCb2Control = (_pcr & 0xE0) >> 4;
 					break;
 				case 0xD:
-					_ifr = val & 0xFF;
+					_ifr = val;
 					break;
 				case 0xE:
-					_ier = val & 0xFF;
+					_ier = val;
 					break;
 			}
 		}
 
-		public int DdrA => _ddra;
+		public byte DdrA => _ddra;
 
-		public int DdrB => _ddrb;
+		public byte DdrB => _ddrb;
 
-		public int PrA => _pra;
+		public byte PrA => _pra;
 
-		public int PrB => _prb;
+		public byte PrB => _prb;
 
-		public int EffectivePrA => _pra | ~_ddra;
+		public byte EffectivePrA => unchecked((byte) (_pra | ~_ddra));
 
-		public int EffectivePrB => _prb | ~_ddrb;
+		public byte EffectivePrB => unchecked((byte) (_prb | ~_ddrb));
 
-		public int ActualPrA => _acrPaLatchEnable ? _paLatch : _port.ReadPra(_pra, _ddra);
+		public byte ActualPrA => _acrPaLatchEnable ? _paLatch : _port.ReadPra(_pra, _ddra);
 
-		public int ActualPrB => _acrPbLatchEnable ? _pbLatch : _port.ReadPrb(_prb, _ddrb);
+		public byte ActualPrB => _acrPbLatchEnable ? _pbLatch : _port.ReadPrb(_prb, _ddrb);
 	}
 }

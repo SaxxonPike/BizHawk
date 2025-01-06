@@ -2,17 +2,17 @@
 {
 	public sealed partial class Sid
 	{
-		public int Peek(int addr)
+		public byte Peek(ushort addr)
 		{
-			return ReadRegister(addr & 0x1F);
+			return ReadRegister(unchecked((ushort) (addr & 0x1F)));
 		}
 
-		public void Poke(int addr, int val)
+		public void Poke(ushort addr, byte val)
 		{
-			WriteRegister(addr & 0x1F, val);
+			WriteRegister(unchecked((ushort) (addr & 0x1F)), val);
 		}
 
-		public int Read(int addr)
+		public byte Read(ushort addr)
 		{
 			addr &= 0x1F;
 			var result = _databus;
@@ -28,10 +28,10 @@
 					break;
 			}
 
-			return result;
+			return unchecked((byte) result);
 		}
 
-		private int ReadRegister(int addr)
+		private byte ReadRegister(ushort addr)
 		{
 			var result = 0x00;
 
@@ -122,10 +122,10 @@
 					break;
 			}
 
-			return result;
+			return unchecked((byte)result);
 		}
 
-		public void Write(int addr, int val)
+		public void Write(ushort addr, byte val)
 		{
 			addr &= 0x1F;
 			_databus = val;
@@ -183,7 +183,7 @@
 			}
 		}
 
-		private void WriteRegister(int addr, int val)
+		private void WriteRegister(ushort addr, byte val)
 		{
 			switch (addr)
 			{

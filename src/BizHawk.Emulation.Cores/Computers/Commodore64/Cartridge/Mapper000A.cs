@@ -46,34 +46,34 @@ internal class Mapper000A : CartridgeDevice
 		base.HardReset();
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		return _rom[addr & 0x1FFF];
 	}
 
-	public override int PeekDE00(int addr)
+	public override byte PeekDE00(ushort addr)
 	{
 		return 0x00;
 	}
 
-	public override int PeekDF00(int addr)
+	public override byte PeekDF00(ushort addr)
 	{
 		return _rom[(addr & 0xFF) | 0x1F00];
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		_capacitorCycles = RESET_CAPACITOR_CYCLES;
 		return _rom[addr & 0x1FFF];
 	}
 
-	public override int ReadDE00(int addr)
+	public override byte ReadDE00(ushort addr)
 	{
 		_capacitorCycles = RESET_CAPACITOR_CYCLES;
 		return 0x00;
 	}
 
-	public override int ReadDF00(int addr)
+	public override byte ReadDF00(ushort addr)
 	{
 		return _rom[(addr & 0xFF) | 0x1F00];
 	}

@@ -34,17 +34,17 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			public void WriteMemory(ushort address, byte value) => _chip.Write(address, value);
 		}
 
-		public Func<int, int> PeekMemory;
-		public Action<int, int> PokeMemory;
+		public Func<ushort, byte> PeekMemory;
+		public Action<ushort, byte> PokeMemory;
 		public Func<bool> ReadAec;
 		public Func<bool> ReadIrq;
 		public Func<bool> ReadNmi;
 		public Func<bool> ReadRdy;
-		public Func<int> ReadBus;
-		public Func<int, int> ReadMemory;
-		public Func<int> ReadPort;
-		public Action<int, int> WriteMemory;
-		public Action<int> WriteMemoryPort;
+		public Func<byte> ReadBus;
+		public Func<ushort, byte> ReadMemory;
+		public Func<byte> ReadPort;
+		public Action<ushort, byte> WriteMemory;
+		public Action<ushort> WriteMemoryPort;
 
 		public Action DebuggerStep;
 
@@ -94,7 +94,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_cpu.ExecuteOne();
 		}
 
-		public int Peek(int addr)
+		public byte Peek(ushort addr)
 		{
 			switch (addr)
 			{
@@ -107,7 +107,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			}
 		}
 
-		public void Poke(int addr, int val)
+		public void Poke(ushort addr, byte val)
 		{
 			switch (addr)
 			{
@@ -123,11 +123,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			}
 		}
 
-		public int PortData => _port.ReadInput(ReadPort());
+		public byte PortData => _port.ReadInput(ReadPort());
 
-		public int Read(int addr)
+		public byte Read(ushort addr)
 		{
-			int ret = 0;
+			byte ret = 0;
 			
 			switch (addr)
 			{
@@ -148,7 +148,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			if (c64._memoryCallbacks.HasReads)
 			{
 				uint flags = (uint)(MemoryCallbackFlags.CPUZero | MemoryCallbackFlags.AccessRead);
-				c64._memoryCallbacks.CallMemoryCallbacks((uint)addr, (uint)ret, flags, "System Bus");
+				c64._memoryCallbacks.CallMemoryCallbacks(addr, ret, flags, "System Bus");
 			}
 
 			return ret;
@@ -168,7 +168,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			ser.Sync(nameof(_nmiDelay), ref _nmiDelay);
 		}
 
-		public void Write(int addr, int val)
+		public void Write(ushort addr, byte val)
 		{
 			switch (addr)
 			{
@@ -189,7 +189,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			if (c64._memoryCallbacks.HasWrites)
 			{
 				uint flags = (uint)(MemoryCallbackFlags.CPUZero | MemoryCallbackFlags.AccessWrite | MemoryCallbackFlags.SizeByte);
-				c64._memoryCallbacks.CallMemoryCallbacks((uint)addr, (uint)val, flags, "System Bus");
+				c64._memoryCallbacks.CallMemoryCallbacks(addr, val, flags, "System Bus");
 			}
 		}
 	}

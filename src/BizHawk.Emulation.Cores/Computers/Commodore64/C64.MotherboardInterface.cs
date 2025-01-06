@@ -2,8 +2,8 @@
 {
 	public sealed partial class Motherboard
 	{
-		private int _lastReadVicAddress = 0x3FFF;
-		private int _lastReadVicData = 0xFF;
+		private ushort _lastReadVicAddress = 0x3FFF;
+		private byte _lastReadVicData = 0xFF;
 		private int _vicBank = 0xC000;
 
 		private bool CassPort_ReadDataOutput()
@@ -16,21 +16,21 @@
 			return (Cpu.PortData & 0x20) != 0;
 		}
 
-		private int Cia1_ReadPortA()
+		private byte Cia1_ReadPortA()
 		{
 			// the low bits are actually the VIC memory address.
-			return (SerPort_ReadDataOut() && Serial.ReadDeviceData() ? 0x80 : 0x00) |
-				   (SerPort_ReadClockOut() && Serial.ReadDeviceClock() ? 0x40 : 0x00) |
-					0x3F;
+			return unchecked((byte) ((SerPort_ReadDataOut() && Serial.ReadDeviceData() ? 0x80 : 0x00) |
+				(SerPort_ReadClockOut() && Serial.ReadDeviceClock() ? 0x40 : 0x00) |
+				0x3F));
 		}
 
-		private int Cia1_ReadPortB()
+		private byte Cia1_ReadPortB()
 		{
 			// Ordinarily these are connected to the userport.
 			return 0x00;
 		}
 
-		private int Cpu_ReadPort()
+		private byte Cpu_ReadPort()
 		{
 			var data = 0x1F;
 			if (!Cassette.ReadSenseBuffer())
@@ -38,10 +38,10 @@
 				data &= 0xEF;
 			}
 
-			return data;
+			return unchecked((byte) data);
 		}
 
-		private void Cpu_WriteMemoryPort(int addr)
+		private void Cpu_WriteMemoryPort(ushort addr)
 		{
 			Pla.WriteMemory(addr, ReadOpenBus());
 		}
@@ -71,7 +71,7 @@
 			return (Cpu.PortData & 0x04) != 0;
 		}
 
-		private int Pla_ReadCia0(int addr)
+		private byte Pla_ReadCia0(ushort addr)
 		{
 			if (addr == 0xDC00 || addr == 0xDC01)
 			{
@@ -80,7 +80,7 @@
 			return Cia0.Read(addr);
 		}
 
-		private int Pla_ReadColorRam(int addr)
+		private byte Pla_ReadColorRam(ushort addr)
 		{
 			var result = ReadOpenBus();
 			result &= 0xF0;
@@ -98,12 +98,12 @@
 			return (Cpu.PortData & 0x01) != 0;
 		}
 
-		private int Pla_ReadExpansion0(int addr)
+		private byte Pla_ReadExpansion0(ushort addr)
 		{
 			return CartPort.IsConnected ? CartPort.ReadLoExp(addr) : _lastReadVicData;
 		}
 
-		private int Pla_ReadExpansion1(int addr)
+		private byte Pla_ReadExpansion1(ushort addr)
 		{
 			return CartPort.IsConnected ? CartPort.ReadHiExp(addr) : _lastReadVicData;
 		}
@@ -126,25 +126,25 @@
 			return !((Cia1.DdrA & 0x20) != 0 && (Cia1.PrA & 0x20) != 0);
 		}
 
-		private int Sid_ReadPotX()
+		private byte Sid_ReadPotX()
 		{
 			return 255;
 		}
 
-		private int Sid_ReadPotY()
+		private byte Sid_ReadPotY()
 		{
 			return 255;
 		}
 
-		private int Vic_ReadMemory(int addr)
+		private byte Vic_ReadMemory(ushort addr)
 		{
 			// the system sees (cia1.PortAData & 0x3) but we use a shortcut
-			_lastReadVicAddress = addr | _vicBank;
+			_lastReadVicAddress = unchecked((ushort) (addr | _vicBank));
 			_lastReadVicData = Pla.VicRead(_lastReadVicAddress);
 			return _lastReadVicData;
 		}
 
-		private int ReadOpenBus()
+		private byte ReadOpenBus()
 		{
 			return _lastReadVicData;
 		}

@@ -50,77 +50,77 @@ internal sealed class Mapper0001 : CartridgeDevice
 		_cartEnabled = true;
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		return GetLoRom(addr);
 	}
 
-	public override int PeekA000(int addr)
+	public override byte PeekA000(ushort addr)
 	{
 		return Peek8000(addr);
 	}
 
-	public override int PeekDF00(int addr)
+	public override byte PeekDF00(ushort addr)
 	{
 		return GetIo2(addr);
 	}
 
-	public override void Poke8000(int addr, int val)
+	public override void Poke8000(ushort addr, byte val)
 	{
 		SetLoRom(addr, val);
 	}
 
-	public override void PokeA000(int addr, int val)
+	public override void PokeA000(ushort addr, byte val)
 	{
 		Poke8000(addr, val);
 	}
 
-	public override void PokeDE00(int addr, int val)
+	public override void PokeDE00(ushort addr, byte val)
 	{
 		SetState(val);
 	}
 
-	public override void PokeDF00(int addr, int val)
+	public override void PokeDF00(ushort addr, byte val)
 	{
 		SetIo2(addr, val);
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		return GetLoRom(addr);
 	}
 
-	public override int ReadA000(int addr)
+	public override byte ReadA000(ushort addr)
 	{
 		return GetHiRom(addr);
 	}
 
-	public override int ReadDF00(int addr)
+	public override byte ReadDF00(ushort addr)
 	{
 		return GetIo2(addr);
 	}
 
-	public override void Write8000(int addr, int val)
+	public override void Write8000(ushort addr, byte val)
 	{
 		SetLoRom(addr, val);
 	}
 
-	public override void WriteA000(int addr, int val)
+	public override void WriteA000(ushort addr, byte val)
 	{
 		SetLoRom(addr, val);
 	}
 
-	public override void WriteDE00(int addr, int val)
+	public override void WriteDE00(ushort addr, byte val)
 	{
 		SetState(val);
 	}
 
-	public override void WriteDF00(int addr, int val)
+	public override void WriteDF00(ushort addr, byte val)
 	{
 		SetIo2(addr, val);
 	}
 
-	private void SetState(int val)
+	private void SetState(byte val)
 	{
 		pinGame = (val & 0x01) == 0;
 		pinExRom = (val & 0x02) != 0;
@@ -129,24 +129,24 @@ internal sealed class Mapper0001 : CartridgeDevice
 		_ramEnabled = (val & 0x20) == 0;
 	}
 
-	private int GetLoRom(int addr)
+	private byte GetLoRom(ushort addr)
 	{
 		return _ramEnabled
 			? _ram[addr & 0x1FFF]
 			: _rom[(addr & 0x1FFF) | _romOffset];
 	}
 
-	private int GetHiRom(int addr)
+	private byte GetHiRom(ushort addr)
 	{
 		return _rom[(addr & 0x1FFF) | _romOffset];
 	}
 
-	private void SetLoRom(int addr, int val)
+	private void SetLoRom(ushort addr, byte val)
 	{
-		_ram[addr & 0x1FFF] = unchecked((byte) val);
+		_ram[addr & 0x1FFF] = val;
 	}
 
-	private int GetIo2(int addr)
+	private byte GetIo2(ushort addr)
 	{
 		if (!_cartEnabled)
 		{
@@ -158,7 +158,7 @@ internal sealed class Mapper0001 : CartridgeDevice
 			: _rom[(addr & 0xFF) | _romOffset | 0x1F00];
 	}
 
-	private void SetIo2(int addr, int val)
+	private void SetIo2(ushort addr, byte val)
 	{
 		_ram[addr & 0x1FFF] = unchecked((byte) (val & 0xFF));
 	}

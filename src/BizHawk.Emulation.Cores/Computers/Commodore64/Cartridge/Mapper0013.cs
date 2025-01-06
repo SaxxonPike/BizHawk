@@ -69,10 +69,10 @@ internal sealed class Mapper0013 : CartridgeDevice
 		UpdateState();
 	}
 
-	public override int Peek8000(int addr) => 
+	public override byte Peek8000(ushort addr) => 
 		_currentBank[addr];
 
-	public override void PokeDE00(int addr, int val)
+	public override void PokeDE00(ushort addr, byte val)
 	{
 		if (addr == 0x00)
 		{
@@ -80,7 +80,7 @@ internal sealed class Mapper0013 : CartridgeDevice
 		}
 	}
 
-	public override int Read8000(int addr) => 
+	public override byte Read8000(ushort addr) => 
 		_currentBank[addr];
 
 	private void UpdateState()
@@ -92,7 +92,7 @@ internal sealed class Mapper0013 : CartridgeDevice
 			: (true, true);
 	}
 
-	public override void WriteDE00(int addr, int val)
+	public override void WriteDE00(ushort addr, byte val)
 	{
 		if (addr == 0x00)
 		{

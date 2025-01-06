@@ -6,32 +6,32 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 	{
 		private interface IPort
 		{
-			int ReadPra(int pra, int ddra);
-			int ReadPrb(int prb, int ddrb);
-			int ReadExternalPra();
-			int ReadExternalPrb();
+			byte ReadPra(byte pra, byte ddra);
+			byte ReadPrb(byte prb, byte ddrb);
+			byte ReadExternalPra();
+			byte ReadExternalPrb();
 
 			void SyncState(Serializer ser);
 		}
 
 		private sealed class DisconnectedPort : IPort
 		{
-			public int ReadPra(int pra, int ddra)
+			public byte ReadPra(byte pra, byte ddra)
 			{
-				return (pra | ~ddra) & 0xFF;
+				return unchecked((byte)(pra | ~ddra));
 			}
 
-			public int ReadPrb(int prb, int ddrb)
+			public byte ReadPrb(byte prb, byte ddrb)
 			{
-				return (prb | ~ddrb) & 0xFF;
+				return unchecked((byte)(prb | ~ddrb));
 			}
 
-			public int ReadExternalPra()
+			public byte ReadExternalPra()
 			{
 				return 0xFF;
 			}
 
-			public int ReadExternalPrb()
+			public byte ReadExternalPrb()
 			{
 				return 0xFF;
 			}
@@ -44,31 +44,31 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 
 		private sealed class DriverPort : IPort
 		{
-			private readonly Func<int> _readPrA;
-			private readonly Func<int> _readPrB;
+			private readonly Func<byte> _readPrA;
+			private readonly Func<byte> _readPrB;
 
-			public DriverPort(Func<int> readPrA, Func<int> readPrB)
+			public DriverPort(Func<byte> readPrA, Func<byte> readPrB)
 			{
 				_readPrA = readPrA;
 				_readPrB = readPrB;
 			}
 
-			public int ReadPra(int pra, int ddra)
+			public byte ReadPra(byte pra, byte ddra)
 			{
-				return (pra | ~ddra) & ReadExternalPra();
+				return unchecked((byte) ((pra | ~ddra) & ReadExternalPra()));
 			}
 
-			public int ReadPrb(int prb, int ddrb)
+			public byte ReadPrb(byte prb, byte ddrb)
 			{
-				return (prb & ddrb) | (_readPrB() & ~ddrb);
+				return unchecked((byte) ((prb & ddrb) | (_readPrB() & ~ddrb)));
 			}
 
-			public int ReadExternalPra()
+			public byte ReadExternalPra()
 			{
 				return _readPrA();
 			}
 
-			public int ReadExternalPrb()
+			public byte ReadExternalPrb()
 			{
 				return _readPrB();
 			}
@@ -95,33 +95,33 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 				_driveNumber = (driveNumber & 0x3) << 5;
 			}
 
-			public int ReadPra(int pra, int ddra)
+			public byte ReadPra(byte pra, byte ddra)
 			{
-				return (pra | ~ddra) & ReadExternalPra();
+				return unchecked((byte)((pra | ~ddra) & ReadExternalPra()));
 			}
 
-			public int ReadPrb(int prb, int ddrb)
+			public byte ReadPrb(byte prb, byte ddrb)
 			{
-				return (prb & ddrb) |
-					   (~ddrb & 0xE5 & (
-					   (_readClock() ? 0x04 : 0x00) |
-					   (_readData() ? 0x01 : 0x00) |
-					   (_readAtn() ? 0x80 : 0x00) |
-					   _driveNumber));
+				return unchecked((byte) ((prb & ddrb) |
+					(~ddrb & 0xE5 & (
+						(_readClock() ? 0x04 : 0x00) |
+						(_readData() ? 0x01 : 0x00) |
+						(_readAtn() ? 0x80 : 0x00) |
+						_driveNumber))));
 			}
 
-			public int ReadExternalPra()
+			public byte ReadExternalPra()
 			{
 				return 0xFF;
 			}
 
-			public int ReadExternalPrb()
+			public byte ReadExternalPrb()
 			{
-				return
+				return unchecked((byte) (
 					(_readClock() ? 0x04 : 0x00) |
 					(_readData() ? 0x01 : 0x00) |
 					(_readAtn() ? 0x80 : 0x00) |
-					_driveNumber;
+					_driveNumber));
 			}
 
 			public void SyncState(Serializer ser)

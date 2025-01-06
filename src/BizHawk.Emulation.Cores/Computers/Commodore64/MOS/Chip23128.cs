@@ -24,12 +24,12 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			}
 		}
 
-		public int Peek(int addr)
+		public byte Peek(ushort addr)
 		{
 			return _rom[addr & 0x3FFF];
 		}
 
-		public int Read(int addr)
+		public byte Read(ushort addr)
 		{
 			return _rom[addr & 0x3FFF];
 		}

@@ -7,10 +7,10 @@ internal sealed class Mapper0008 : CartridgeDevice
 {
 	private readonly byte[][] _banks;
 
-	private int _bankMask;
-	private int _bankNumber;
+	private byte _bankMask;
+	private byte _bankNumber;
 	private bool _disabled;
-	private int _latchedval;
+	private byte _latchedval;
 
 	// SuperGame mapper
 	// bank switching is done from DF00
@@ -51,11 +51,11 @@ internal sealed class Mapper0008 : CartridgeDevice
 		}
 	}
 
-	private void BankSet(int index)
+	private void BankSet(byte index)
 	{
 		if (!_disabled)
 		{
-			_bankNumber = index & _bankMask;
+			_bankNumber = unchecked((byte)(index & _bankMask));
 			pinExRom = (index & 0x4) > 0;
 			pinGame = (index & 0x4) > 0;
 			_disabled = (index & 0x8) > 0;
@@ -63,17 +63,17 @@ internal sealed class Mapper0008 : CartridgeDevice
 		}
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		return _banks[_bankNumber][addr];
 	}
 
-	public override int PeekA000(int addr)
+	public override byte PeekA000(ushort addr)
 	{
 		return _banks[_bankNumber][addr + 0x2000];
 	}
 
-	public override void PokeDF00(int addr, int val)
+	public override void PokeDF00(ushort addr, byte val)
 	{
 		if (addr == 0)
 		{
@@ -81,17 +81,17 @@ internal sealed class Mapper0008 : CartridgeDevice
 		}
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		return _banks[_bankNumber][addr];
 	}
 
-	public override int ReadA000(int addr)
+	public override byte ReadA000(ushort addr)
 	{
 		return _banks[_bankNumber][addr + 0x2000];
 	}
 
-	public override void WriteDF00(int addr, int val)
+	public override void WriteDF00(ushort addr, byte val)
 	{
 		if (addr == 0)
 		{
@@ -99,7 +99,7 @@ internal sealed class Mapper0008 : CartridgeDevice
 		}
 	}
 
-	public override int ReadDF00(int addr)
+	public override byte ReadDF00(ushort addr)
 	{
 		return _latchedval;
 	}

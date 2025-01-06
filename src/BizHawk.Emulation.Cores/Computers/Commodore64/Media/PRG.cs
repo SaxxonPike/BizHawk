@@ -12,7 +12,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Media
 				return;
 			}
 
-			var addr = prgFile[0] | (prgFile[1] << 8);
+			var addr = checked((ushort) (prgFile[0] | (prgFile[1] << 8)));
 			var offset = 2;
 			unchecked
 			{

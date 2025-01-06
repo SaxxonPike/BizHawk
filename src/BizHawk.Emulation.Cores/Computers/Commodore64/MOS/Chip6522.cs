@@ -2,7 +2,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 {
 	public static class Chip6522
 	{
-		public static Via Create(Func<int> readPrA, Func<int> readPrB)
+		public static Via Create(Func<byte> readPrA, Func<byte> readPrB)
 		{
 			return new Via(readPrA, readPrB);
 		}

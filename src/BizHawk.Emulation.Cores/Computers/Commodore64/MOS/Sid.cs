@@ -19,7 +19,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
         */
 
 		// ------------------------------------
-		public int _databus;
+		public byte _databus;
 		private int _cachedCycles;
 		private bool _disableVoice3;
 		private int _envelopeOutput0;
@@ -56,8 +56,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		private readonly Voice _voice2;
 		private int _volume;
 
-		public Func<int> ReadPotX;
-		public Func<int> ReadPotY;
+		public Func<byte> ReadPotX;
+		public Func<byte> ReadPotY;
 
 		private RealFFT _fft;
 		private double[] _fftBuffer = new double[0];

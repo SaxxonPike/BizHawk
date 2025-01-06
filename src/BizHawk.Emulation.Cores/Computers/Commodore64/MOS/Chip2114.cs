@@ -17,22 +17,17 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_ram.AsSpan().Clear();
 		}
 
-		public int Peek(int addr)
+		public byte Peek(ushort addr)
 		{
 			return _ram[addr & 0x3FF];
 		}
 
-		public void Poke(int addr, int val)
+		public void Poke(ushort addr, byte val)
 		{
 			_ram[addr & 0x3FF] = unchecked((byte)(val & 0xF));
 		}
 
-		public int Read(int addr)
-		{
-			return _ram[addr & 0x3FF];
-		}
-
-		public int ReadInt(int addr)
+		public byte Read(ushort addr)
 		{
 			return _ram[addr & 0x3FF];
 		}
@@ -42,7 +37,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			ser.Sync(nameof(_ram), ref _ram, useNull: false);
 		}
 
-		public void Write(int addr, int val)
+		public void Write(ushort addr, byte val)
 		{
 			_ram[addr & 0x3FF] = unchecked((byte) (val & 0xF));
 		}

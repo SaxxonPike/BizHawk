@@ -69,13 +69,13 @@ public class Am29F040B
 	}
 
 	private int _busyTimeRemaining;
-	private int _status;
+	private byte _status;
 	private byte[] _data = new byte[ImageSize];
 	private Mode _mode;
 	private Sequence _sequence;
 	private bool _returnStatus;
-	private int _startAddress;
-	private int _endAddress;
+	private uint _startAddress;
+	private uint _endAddress;
 	private bool _errorPending;
 	private bool _dataDirty;
 
@@ -147,14 +147,13 @@ public class Am29F040B
 	public Span<byte> Data =>
 		_data.AsSpan();
 
-	public int Peek(int addr) =>
-		_data[addr & ImageMask] & 0xFF;
+	public byte Peek(uint addr) =>
+		_data[addr & ImageMask];
 
-	public int Poke(int addr, int val)
+	public void Poke(uint addr, byte val)
 	{
-		var newData = val & 0xFF;
-		_dataDirty |= _data[addr & ImageMask] != newData;
-		return _data[addr & ImageMask] = unchecked((byte)newData);
+		_dataDirty |= _data[addr & ImageMask] != val;
+		_data[addr & ImageMask] = val;
 	}
 
 	// From the datasheet:
@@ -162,9 +161,9 @@ public class Am29F040B
 	// commands except for Program Address (PA), Sector Address (SA), Read
 	// Address (RA), and AutoSelect sector protect verify.
 
-	public int Read(int addr)
+	public byte Read(uint addr)
 	{
-		int data;
+		byte data;
 
 		if (_busyTimeRemaining > 0)
 		{
@@ -215,7 +214,7 @@ public class Am29F040B
 		return data;
 	}
 
-	public void Write(int addr, int data)
+	public void Write(uint addr, byte data)
 	{
 		switch (_mode, _sequence, (Register)(addr & RegisterMask), (Signal)data)
 		{
@@ -233,7 +232,7 @@ public class Am29F040B
 				_errorPending = data != newData;
 				_data[addr & ImageMask] = unchecked((byte)newData);
 				_busyTimeRemaining = WriteLatency; // 7-30us
-				_status = (data & 0x80) ^ PollingBit;
+				_status = unchecked((byte) ((data & 0x80) ^ PollingBit));
 				_returnStatus = true;
 				_startAddress = _endAddress = addr;
 				break;
@@ -278,7 +277,7 @@ public class Am29F040B
 					break;
 
 				_busyTimeRemaining = EraseSectorLatency; // ~1sec 
-				_data.AsSpan(addr & ~SectorMask, SectorSize).Fill(0xFF);
+				_data.AsSpan(checked((int)(addr & ~SectorMask)), SectorSize).Fill(0xFF);
 				_dataDirty = true;
 				_returnStatus = true;
 				_status = EraseBit; // bit 7 = complete

@@ -115,17 +115,17 @@ internal sealed class Mapper0005 : CartridgeDevice
 		_currentBankB = !pinGame ? _banksB[_bankNumber] : _dummyBank;
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		return _currentBankA[addr];
 	}
 
-	public override int PeekA000(int addr)
+	public override byte PeekA000(ushort addr)
 	{
 		return _currentBankB[addr];
 	}
 
-	public override void PokeDE00(int addr, int val)
+	public override void PokeDE00(ushort addr, byte val)
 	{
 		if (addr == 0x00)
 		{
@@ -133,17 +133,17 @@ internal sealed class Mapper0005 : CartridgeDevice
 		}
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		return _currentBankA[addr];
 	}
 
-	public override int ReadA000(int addr)
+	public override byte ReadA000(ushort addr)
 	{
 		return _currentBankB[addr];
 	}
 
-	public override void WriteDE00(int addr, int val)
+	public override void WriteDE00(ushort addr, byte val)
 	{
 		if (addr == 0x00)
 		{

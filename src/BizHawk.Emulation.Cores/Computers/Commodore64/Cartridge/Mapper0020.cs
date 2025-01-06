@@ -47,10 +47,10 @@ internal sealed class Mapper0020 : CartridgeDevice, ISaveRam, IDriveLight
 
 	private bool _boardLed;
 	private bool _jumper;
-	private int _stateBits;
+	private byte _stateBits;
 
 	private byte[] _ram = new byte[256];
-	private int _bankNumber;
+	private byte _bankNumber;
 
 	public Mapper0020(IReadOnlyList<CartridgeChip> chips)
 	{
@@ -135,16 +135,16 @@ internal sealed class Mapper0020 : CartridgeDevice, ISaveRam, IDriveLight
 		}
 	}
 
-	private int CalculateBankOffset(int addr) => 
-		(addr & 0x1FFF) | (_bankNumber << 13);
+	private uint CalculateBankOffset(ushort addr) =>
+		unchecked((uint) ((addr & 0x1FFF) | (_bankNumber << 13)));
 		
-	public override int Peek8000(int addr) => 
+	public override byte Peek8000(ushort addr) => 
 		_chipA.Peek(CalculateBankOffset(addr));
 
-	public override int PeekA000(int addr) => 
+	public override byte PeekA000(ushort addr) => 
 		_chipB.Peek(CalculateBankOffset(addr));
 
-	public override int PeekDE00(int addr)
+	public override byte PeekDE00(ushort addr)
 	{
 		// normally you can't read these regs
 		// but Peek is provided here for debug reasons
@@ -153,24 +153,24 @@ internal sealed class Mapper0020 : CartridgeDevice, ISaveRam, IDriveLight
 		return addr == 0x00 ? _bankNumber : _stateBits;
 	}
 
-	public override void Poke8000(int addr, int val) =>
+	public override void Poke8000(ushort addr, byte val) =>
 		_chipA.Poke(addr, val);
 		
-	public override void PokeA000(int addr, int val) =>
+	public override void PokeA000(ushort addr, byte val) =>
 		_chipB.Poke(addr, val);
 
-	public override int PeekDF00(int addr)
+	public override byte PeekDF00(ushort addr)
 	{
 		addr &= 0xFF;
 		return _ram[addr];
 	}
 
-	public override void PokeDE00(int addr, int val)
+	public override void PokeDE00(ushort addr, byte val)
 	{
 		addr &= 0x02;
 		if (addr == 0x00)
 		{
-			_bankNumber = val & 0x3F;
+			_bankNumber = unchecked((byte) (val & 0x3F));
 		}
 		else
 		{
@@ -178,27 +178,28 @@ internal sealed class Mapper0020 : CartridgeDevice, ISaveRam, IDriveLight
 		}
 	}
 
-	public override void PokeDF00(int addr, int val)
+	public override void PokeDF00(ushort addr, byte val)
 	{
 		addr &= 0xFF;
-		_ram[addr] = unchecked((byte)val);
+		_ram[addr] = val;
 	}
 
-	public override int Read8000(int addr) => 
+	public override byte Read8000(ushort addr) => 
 		_chipA.Read(CalculateBankOffset(addr));
 
-	public override int ReadA000(int addr) =>
+	public override byte ReadA000(ushort addr) =>
 		_chipB.Read(CalculateBankOffset(addr));
 
-	public override int ReadDF00(int addr)
+	public override byte ReadDF00(ushort addr)
 	{
 		addr &= 0xFF;
 		return _ram[addr];
 	}
 
-	private void StateSet(int val)
+	private void StateSet(byte val)
 	{
-		_stateBits = val &= 0x87;
+		val &= 0x87;
+		_stateBits = val;
 		if ((val & 0x04) != 0)
 		{
 			pinGame = (val & 0x01) == 0;
@@ -212,7 +213,7 @@ internal sealed class Mapper0020 : CartridgeDevice, ISaveRam, IDriveLight
 		_boardLed = (val & 0x80) != 0;
 	}
 
-	public override void Write8000(int addr, int val)
+	public override void Write8000(ushort addr, byte val)
 	{
 		if (pinGame || !pinExRom)
 			return;
@@ -220,7 +221,7 @@ internal sealed class Mapper0020 : CartridgeDevice, ISaveRam, IDriveLight
 		_chipA.Write(CalculateBankOffset(addr), val);
 	}
 
-	public override void WriteA000(int addr, int val)
+	public override void WriteA000(ushort addr, byte val)
 	{
 		if (pinGame || !pinExRom)
 			return;
@@ -228,12 +229,12 @@ internal sealed class Mapper0020 : CartridgeDevice, ISaveRam, IDriveLight
 		_chipB.Write(CalculateBankOffset(addr), val);
 	}
 
-	public override void WriteDE00(int addr, int val)
+	public override void WriteDE00(ushort addr, byte val)
 	{
 		addr &= 0x02;
 		if (addr == 0x00)
 		{
-			_bankNumber = val & 0x3F;
+			_bankNumber = unchecked((byte) (val & 0x3F));
 		}
 		else
 		{
@@ -241,9 +242,9 @@ internal sealed class Mapper0020 : CartridgeDevice, ISaveRam, IDriveLight
 		}
 	}
 
-	public override void WriteDF00(int addr, int val)
+	public override void WriteDF00(ushort addr, byte val)
 	{
-		_ram[addr] = unchecked((byte)val);
+		_ram[addr] = val;
 	}
 
 	public override void ExecutePhase()

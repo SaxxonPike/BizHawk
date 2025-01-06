@@ -60,24 +60,24 @@ internal sealed class Mapper0012 : CartridgeDevice
 		}
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		return _bankMain[addr];
 	}
 
-	public override int PeekA000(int addr)
+	public override byte PeekA000(ushort addr)
 	{
 		return _bankHighSelected[addr];
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		_bankIndex = unchecked((byte) ((addr & 0x1000) >> 12));
 		_bankHighSelected = _bankHigh[_bankIndex];
 		return _bankMain[addr];
 	}
 
-	public override int ReadA000(int addr)
+	public override byte ReadA000(ushort addr)
 	{
 		return _bankHighSelected[addr];
 	}

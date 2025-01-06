@@ -13,8 +13,8 @@ internal class Mapper000F : CartridgeDevice
 {
 	private readonly byte[][] _banks; // 8000
 
-	private int _bankMask;
-	private int _bankNumber;
+	private byte _bankMask;
+	private byte _bankNumber;
 
 	private byte[] _currentBank;
 
@@ -41,23 +41,23 @@ internal class Mapper000F : CartridgeDevice
 		}
 	}
 
-	protected void BankSet(int index)
+	protected void BankSet(byte index)
 	{
-		_bankNumber = index & _bankMask;
+		_bankNumber = unchecked((byte) (index & _bankMask));
 		UpdateState();
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		return _currentBank[addr];
 	}
 
-	public override void PokeDE00(int addr, int val)
+	public override void PokeDE00(ushort addr, byte val)
 	{
-		BankSet(addr);
+		BankSet(unchecked((byte) addr));
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		return _currentBank[addr];
 	}
@@ -67,15 +67,15 @@ internal class Mapper000F : CartridgeDevice
 		_currentBank = _banks[_bankNumber];
 	}
 
-	public override int ReadDE00(int addr)
+	public override byte ReadDE00(ushort addr)
 	{
 		BankSet(0);
 
 		return 0;
 	}
 
-	public override void WriteDE00(int addr, int val)
+	public override void WriteDE00(ushort addr, byte val)
 	{
-		BankSet(addr);
+		BankSet(unchecked((byte) addr));
 	}
 }

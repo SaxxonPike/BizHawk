@@ -39,37 +39,38 @@
 			return !inputAtn;
 		}
 
-		private int ReadVia1PrA()
+		private byte ReadVia1PrA()
 		{
-			return _bitHistory & 0xFF;
+			return unchecked((byte) _bitHistory);
 		}
 
-		private int ReadVia1PrB()
+		private byte ReadVia1PrB()
 		{
-			return (_motorStep & 0x03) | (_motorEnabled ? 0x04 : 0x00) | (_sync ? 0x00 : 0x80) | (_diskWriteProtected ? 0x00 : 0x10);
+			return unchecked((byte) ((_motorStep & 0x03) | (_motorEnabled ? 0x04 : 0x00) | (_sync ? 0x00 : 0x80) |
+				(_diskWriteProtected ? 0x00 : 0x10)));
 		}
 
-		public int Peek(int addr) =>
+		public byte Peek(ushort addr) =>
 			(addr & 0xFC00) switch
 			{
 				0x1800 => Via0.Peek(addr),
 				0x1C00 => Via1.Peek(addr),
-				>= 0x8000 => DriveRom.Peek(addr & 0x3FFF),
+				>= 0x8000 => DriveRom.Peek(unchecked((ushort)(addr & 0x3FFF))),
 				< 0x800 => _ram[addr & 0x7FF],
-				_ => (addr >> 8) & 0xFF
+				_ => unchecked((byte)(addr >> 8))
 			};
 
-		public int PeekVia0(int addr)
+		public byte PeekVia0(ushort addr)
 		{
 			return Via0.Peek(addr);
 		}
 
-		public int PeekVia1(int addr)
+		public byte PeekVia1(ushort addr)
 		{
 			return Via1.Peek(addr);
 		}
 
-		public void Poke(int addr, int val)
+		public void Poke(ushort addr, byte val)
 		{
 			switch (addr & 0xFC00)
 			{
@@ -80,32 +81,32 @@
 					Via1.Poke(addr, val);
 					break;
 				case < 0x800:
-					_ram[addr & 0x7FF] = unchecked((byte)val);
+					_ram[addr & 0x7FF] = val;
 					break;
 			}
 		}
 
-		public void PokeVia0(int addr, int val)
+		public void PokeVia0(ushort addr, byte val)
 		{
 			Via0.Poke(addr, val);
 		}
 
-		public void PokeVia1(int addr, int val)
+		public void PokeVia1(ushort addr, byte val)
 		{
 			Via1.Poke(addr, val);
 		}
 
-		public int Read(int addr) =>
+		public byte Read(ushort addr) =>
 			(addr & 0xFC00) switch
 			{
 				0x1800 => Via0.Read(addr),
 				0x1C00 => Via1.Read(addr),
-				>= 0x8000 => DriveRom.Read(addr & 0x3FFF),
+				>= 0x8000 => DriveRom.Read(unchecked((ushort) (addr & 0x3FFF))),
 				< 0x800 => _ram[addr],
-				_ => (addr >> 8) & 0xFF
+				_ => unchecked((byte) ((addr >> 8) & 0xFF))
 			};
 
-		public void Write(int addr, int val)
+		public void Write(ushort addr, byte val)
 		{
 			switch (addr & 0xFC00)
 			{
@@ -116,7 +117,7 @@
 					Via1.Write(addr, val);
 					break;
 				case < 0x800:
-					_ram[addr & 0x7FF] = unchecked((byte) val);
+					_ram[addr & 0x7FF] = val;
 					break;
 			}
 		}

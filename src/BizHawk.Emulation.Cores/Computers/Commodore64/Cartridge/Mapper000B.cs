@@ -25,27 +25,27 @@ internal sealed class Mapper000B : CartridgeDevice
 		// Nothing to save
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		return _rom[addr];
 	}
 
-	public override int PeekA000(int addr)
+	public override byte PeekA000(ushort addr)
 	{
 		return _rom[addr | 0x2000];
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		return _rom[addr];
 	}
 
-	public override int ReadA000(int addr)
+	public override byte ReadA000(ushort addr)
 	{
 		return _rom[addr | 0x2000];
 	}
 
-	public override int ReadDF00(int addr)
+	public override byte ReadDF00(ushort addr)
 	{
 		pinGame = true;
 		return base.ReadDF00(addr);

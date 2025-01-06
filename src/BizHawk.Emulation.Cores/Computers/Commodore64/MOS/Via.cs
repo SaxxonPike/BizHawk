@@ -30,23 +30,23 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		private const int ACR_T1_CONTROL_CONTINUOUS_INTERRUPTS_AND_OUTPUT_ON_PB7 = 0xC0;
 		private const int ACR_T1_CONTROL_INTERRUPT_ON_LOAD_AND_PULSE_PB7 = 0x80;
 
-		private int _pra;
-		private int _ddra;
-		private int _prb;
-		private int _ddrb;
+		private byte _pra;
+		private byte _ddra;
+		private byte _prb;
+		private byte _ddrb;
 		private int _t1C;
 		private int _t1L;
 		private int _t2C;
 		private int _t2L;
-		private int _sr;
-		private int _acr;
-		private int _pcr;
-		private int _ifr;
-		private int _ier;
+		private byte _sr;
+		private byte _acr;
+		private byte _pcr;
+		private byte _ifr;
+		private byte _ier;
 		private readonly IPort _port;
 
-		private int _paLatch;
-		private int _pbLatch;
+		private byte _paLatch;
+		private byte _pbLatch;
 
 		private int _pcrCa1IntControl;
 		private int _pcrCa2Control;
@@ -79,7 +79,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		public bool Cb2;
 		private bool _pb6;
 
-		private int _interruptNextClock;
+		private byte _interruptNextClock;
 		private bool _t1CLoaded;
 		private bool _t2CLoaded;
 		private int _t1Delayed;
@@ -90,7 +90,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_port = new DisconnectedPort();
 		}
 
-		public Via(Func<int> readPrA, Func<int> readPrB)
+		public Via(Func<byte> readPrA, Func<byte> readPrB)
 		{
 			_port = new DriverPort(readPrA, readPrB);
 		}
@@ -379,7 +379,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			if (shiftIn)
 			{
 				_sr <<= 1;
-				_sr |= Cb2 ? 1 : 0;
+				_sr |= Cb2 ? (byte)1 : (byte)0;
 			}
 
 			if ((_ifr & _ier & 0x7F) != 0)

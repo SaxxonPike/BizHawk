@@ -72,22 +72,22 @@ internal sealed class Mapper0000 : CartridgeDevice
 		ser.Sync("RomMaskB", ref _romBMask);
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		return _romA[addr & _romAMask];
 	}
 
-	public override int PeekA000(int addr)
+	public override byte PeekA000(ushort addr)
 	{
 		return _romB[addr & _romBMask];
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		return _romA[addr & _romAMask];
 	}
 
-	public override int ReadA000(int addr)
+	public override byte ReadA000(ushort addr)
 	{
 		return _romB[addr & _romBMask];
 	}

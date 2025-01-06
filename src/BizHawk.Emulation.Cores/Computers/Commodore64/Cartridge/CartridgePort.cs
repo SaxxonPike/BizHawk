@@ -6,7 +6,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge;
 
 public sealed class CartridgePort
 {
-	public Func<int> ReadOpenBus;
+	public Func<byte> ReadOpenBus;
 
 	private CartridgeDevice _cartridgeDevice;
 	private bool _connected;
@@ -21,30 +21,56 @@ public sealed class CartridgePort
 
 	// ------------------------------------------
 
-	public int PeekHiExp(int addr)
+	public byte PeekHiExp(ushort addr)
 	{
-		return _connected ? _cartridgeDevice.PeekDF00(addr & 0x00FF) : 0xFF;
+		return unchecked((byte) (_connected ? _cartridgeDevice.PeekDF00(unchecked((ushort) (addr & 0x00FF))) : 0xFF));
 	}
 
-	public int PeekHiRom(int addr)
+	public byte PeekHiRom(ushort addr)
 	{
-		return _connected ? _cartridgeDevice.PeekA000(addr & 0x1FFF) : 0xFF;
+		return unchecked((byte) (_connected ? _cartridgeDevice.PeekA000(unchecked((ushort) (addr & 0x1FFF))) : 0xFF));
 	}
 
-	public int PeekLoExp(int addr)
+	public byte PeekLoExp(ushort addr)
 	{
-		return _connected ? _cartridgeDevice.PeekDE00(addr & 0x00FF) : 0xFF;
+		return unchecked((byte) (_connected ? _cartridgeDevice.PeekDE00(unchecked((ushort) (addr & 0x00FF))) : 0xFF));
 	}
 
-	public int PeekLoRom(int addr)
+	public byte PeekLoRom(ushort addr)
 	{
-		return _connected ? _cartridgeDevice.Peek8000(addr & 0x1FFF) : 0xFF;
+		return unchecked((byte) (_connected ? _cartridgeDevice.Peek8000(unchecked((ushort) (addr & 0x1FFF))) : 0xFF));
 	}
 
-	public void PokeHiExp(int addr, int val) { if (_connected) { _cartridgeDevice.PokeDF00(addr & 0x00FF, val); } }
-	public void PokeHiRom(int addr, int val) { if (_connected) { _cartridgeDevice.PokeA000(addr & 0x1FFF, val); } }
-	public void PokeLoExp(int addr, int val) { if (_connected) { _cartridgeDevice.PokeDE00(addr & 0x00FF, val); } }
-	public void PokeLoRom(int addr, int val) { if (_connected) { _cartridgeDevice.Poke8000(addr & 0x1FFF, val); } }
+	public void PokeHiExp(ushort addr, byte val)
+	{
+		if (_connected)
+		{
+			_cartridgeDevice.PokeDF00(unchecked((ushort)(addr & 0x00FF)), val);
+		}
+	}
+
+	public void PokeHiRom(ushort addr, byte val)
+	{
+		if (_connected)
+		{
+			_cartridgeDevice.PokeA000(unchecked((ushort)(addr & 0x1FFF)), val);
+		}
+	}
+	public void PokeLoExp(ushort addr, byte val) 
+	{
+		if (_connected)
+		{
+			_cartridgeDevice.PokeDE00(unchecked((ushort)(addr & 0x00FF)), val);
+		} 
+	}
+
+	public void PokeLoRom(ushort addr, byte val)
+	{
+		if (_connected)
+		{
+			_cartridgeDevice.Poke8000(unchecked((ushort)(addr & 0x1FFF)), val);
+		}
+	}
 
 	public bool ReadExRom()
 	{
@@ -56,30 +82,57 @@ public sealed class CartridgePort
 		return !_connected || _cartridgeDevice.Game;
 	}
 
-	public int ReadHiExp(int addr)
+	public byte ReadHiExp(ushort addr)
 	{
-		return _connected ? _cartridgeDevice.ReadDF00(addr & 0x00FF) : 0xFF;
+		return unchecked((byte)(_connected ? _cartridgeDevice.ReadDF00(unchecked((ushort)(addr & 0x00FF))) : 0xFF));
 	}
 
-	public int ReadHiRom(int addr)
+	public byte ReadHiRom(ushort addr)
 	{
-		return _connected ? _cartridgeDevice.ReadA000(addr & 0x1FFF) : 0xFF;
+		return unchecked((byte)(_connected ? _cartridgeDevice.ReadA000(unchecked((ushort)(addr & 0x1FFF))) : 0xFF));
 	}
 
-	public int ReadLoExp(int addr)
+	public byte ReadLoExp(ushort addr)
 	{
-		return _connected ? _cartridgeDevice.ReadDE00(addr & 0x00FF) : 0xFF;
+		return unchecked((byte)(_connected ? _cartridgeDevice.ReadDE00(unchecked((ushort)(addr & 0x00FF))) : 0xFF));
 	}
 
-	public int ReadLoRom(int addr)
+	public byte ReadLoRom(ushort addr)
 	{
-		return _connected ? _cartridgeDevice.Read8000(addr & 0x1FFF) : 0xFF;
+		return unchecked((byte)(_connected ? _cartridgeDevice.Read8000(unchecked((ushort)(addr & 0x1FFF))) : 0xFF));
 	}
 
-	public void WriteHiExp(int addr, int val) { if (_connected) { _cartridgeDevice.WriteDF00(addr & 0x00FF, val); } }
-	public void WriteHiRom(int addr, int val) { if (_connected) { _cartridgeDevice.WriteA000(addr & 0x1FFF, val); } }
-	public void WriteLoExp(int addr, int val) { if (_connected) { _cartridgeDevice.WriteDE00(addr & 0x00FF, val); } }
-	public void WriteLoRom(int addr, int val) { if (_connected) { _cartridgeDevice.Write8000(addr & 0x1FFF, val); } }
+	public void WriteHiExp(ushort addr, byte val)
+	{
+		if (_connected)
+		{
+			_cartridgeDevice.WriteDF00(unchecked((ushort) (addr & 0x00FF)), val);
+		}
+	}
+
+	public void WriteHiRom(ushort addr, byte val)
+	{
+		if (_connected)
+		{
+			_cartridgeDevice.WriteA000(unchecked((ushort)(addr & 0x1FFF)), val);
+		}
+	}
+
+	public void WriteLoExp(ushort addr, byte val)
+	{
+		if (_connected)
+		{
+			_cartridgeDevice.WriteDE00(unchecked((ushort)(addr & 0x00FF)), val);
+		}
+	}
+
+	public void WriteLoRom(ushort addr, byte val)
+	{
+		if (_connected)
+		{
+			_cartridgeDevice.Write8000(unchecked((ushort) (addr & 0x1FFF)), val);
+		}
+	}
 
 	// ------------------------------------------
 

@@ -15,22 +15,72 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 
 			var domains = new List<MemoryDomain>
 			{
-				C64MemoryDomainFactory.Create("System Bus", 0x10000, a => _board.Cpu.Peek(a), (a, v) => _board.Cpu.Poke(a, v)),
-				C64MemoryDomainFactory.Create("RAM", 0x10000, a => _board.Ram.Peek(a), (a, v) => _board.Ram.Poke(a, v)),
-				C64MemoryDomainFactory.Create("CIA0", 0x10, a => _board.Cia0.Peek(a), (a, v) => _board.Cia0.Poke(a, v)),
-				C64MemoryDomainFactory.Create("CIA1", 0x10, a => _board.Cia1.Peek(a), (a, v) => _board.Cia1.Poke(a, v)),
-				C64MemoryDomainFactory.Create("VIC", 0x40, a => _board.Vic.Peek(a), (a, v) => _board.Vic.Poke(a, v)),
-				C64MemoryDomainFactory.Create("SID", 0x20, a => _board.Sid.Peek(a), (a, v) => _board.Sid.Poke(a, v)),
+				C64MemoryDomainFactory.Create(
+					name: "System Bus", 
+					size: 0x10000, 
+					peekByte: _board.Cpu.Peek, 
+					pokeByte: _board.Cpu.Poke
+				),
+				C64MemoryDomainFactory.Create(
+					name: "RAM", 
+					size: 0x10000, 
+					peekByte: _board.Ram.Peek, 
+					pokeByte: _board.Ram.Poke
+				),
+				C64MemoryDomainFactory.Create(
+					name: "CIA0", 
+					size: 0x10, 
+					peekByte: _board.Cia0.Peek, 
+					pokeByte: _board.Cia0.Poke
+				),
+				C64MemoryDomainFactory.Create(
+					name: "CIA1", 
+					size: 0x10, 
+					peekByte: _board.Cia1.Peek, 
+					pokeByte: _board.Cia1.Poke
+				),
+				C64MemoryDomainFactory.Create(
+					name: "VIC", 
+					size: 0x40, 
+					peekByte: _board.Vic.Peek, 
+					pokeByte: _board.Vic.Poke
+				),
+				C64MemoryDomainFactory.Create(
+					name: "SID", 
+					size: 0x20, 
+					peekByte: _board.Sid.Peek, 
+					pokeByte: _board.Sid.Poke
+				)
 			};
 
 			if (diskDriveEnabled)
 			{
 				domains.AddRange(new[]
 				{
-					C64MemoryDomainFactory.Create("1541 Bus", 0x10000, a => _board.DiskDrive.Peek(a), (a, v) => _board.DiskDrive.Poke(a, v)),
-					C64MemoryDomainFactory.Create("1541 RAM", 0x800, a => _board.DiskDrive.Peek(a), (a, v) => _board.DiskDrive.Poke(a, v)),
-					C64MemoryDomainFactory.Create("1541 VIA0", 0x10, a => _board.DiskDrive.PeekVia0(a), (a, v) => _board.DiskDrive.PokeVia0(a, v)),
-					C64MemoryDomainFactory.Create("1541 VIA1", 0x10, a => _board.DiskDrive.PeekVia1(a), (a, v) => _board.DiskDrive.PokeVia1(a, v))
+					C64MemoryDomainFactory.Create(
+						name: "1541 Bus",
+						size: 0x10000, 
+						peekByte: _board.DiskDrive.Peek,
+						pokeByte: _board.DiskDrive.Poke
+					),
+					C64MemoryDomainFactory.Create(
+						name: "1541 RAM",
+						size: 0x800, 
+						peekByte: _board.DiskDrive.Peek,
+						pokeByte: _board.DiskDrive.Poke
+					),
+					C64MemoryDomainFactory.Create(
+						name: "1541 VIA0",
+						size: 0x10, 
+						peekByte: _board.DiskDrive.PeekVia0,
+						pokeByte: _board.DiskDrive.PokeVia0
+					),
+					C64MemoryDomainFactory.Create(
+						name: "1541 VIA1",
+						size: 0x10, 
+						peekByte: _board.DiskDrive.PeekVia1,
+						pokeByte: _board.DiskDrive.PokeVia1
+					)
 				});
 			}
 
@@ -53,9 +103,14 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 
 		private static class C64MemoryDomainFactory
 		{
-			public static MemoryDomain Create(string name, int size, Func<int, int> peekByte, Action<int, int> pokeByte)
+			public static MemoryDomain Create(string name, int size, Func<ushort, byte> peekByte, Action<ushort, byte> pokeByte)
 			{
-				return new MemoryDomainDelegate(name, size, MemoryDomain.Endian.Little, addr => unchecked((byte)peekByte((int)addr)), (addr, val) => pokeByte(unchecked((int)addr), val), 1);
+				return new MemoryDomainDelegate(
+					name: name, 
+					size: size,
+					endian: MemoryDomain.Endian.Little,
+					peek: addr => peekByte(unchecked((ushort)addr)),
+					poke: (addr, val) => pokeByte(unchecked((ushort)addr), val), 1);
 			}
 		}
 	}

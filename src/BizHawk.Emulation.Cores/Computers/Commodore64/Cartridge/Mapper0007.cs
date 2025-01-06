@@ -40,7 +40,7 @@ internal sealed class Mapper0007 : CartridgeDevice
 		ser.Sync("Disabled", ref _disabled);
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
 		if (!_disabled)
 		{
@@ -50,11 +50,11 @@ internal sealed class Mapper0007 : CartridgeDevice
 		return base.Read8000(addr);
 	}
 
-	public override void PokeDE00(int addr, int val)
+	public override void PokeDE00(ushort addr, byte val)
 	{
 		if (addr == 0)
 		{
-			byte tempBank = (byte)((val & 0x1) << 3);
+			var tempBank = unchecked((byte)((val & 0x1) << 3));
 			tempBank |= (byte)((val & 0x38) >> 3);
 			_bankNumber = tempBank;
 			if (val == 0x86)
@@ -64,7 +64,7 @@ internal sealed class Mapper0007 : CartridgeDevice
 		}
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
 		if (!_disabled)
 		{
@@ -74,7 +74,7 @@ internal sealed class Mapper0007 : CartridgeDevice
 		return base.Read8000(addr);
 	}
 
-	public override void WriteDE00(int addr, int val)
+	public override void WriteDE00(ushort addr, byte val)
 	{
 		if (addr == 0)
 		{

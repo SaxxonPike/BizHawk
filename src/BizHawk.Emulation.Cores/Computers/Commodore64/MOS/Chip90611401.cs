@@ -7,57 +7,57 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 	public sealed class Chip90611401
 	{
 		// ------------------------------------
-		public Func<int, int> PeekBasicRom;
-		public Func<int, int> PeekCartridgeLo;
-		public Func<int, int> PeekCartridgeHi;
-		public Func<int, int> PeekCharRom;
-		public Func<int, int> PeekCia0;
-		public Func<int, int> PeekCia1;
-		public Func<int, int> PeekColorRam;
-		public Func<int, int> PeekExpansionLo;
-		public Func<int, int> PeekExpansionHi;
-		public Func<int, int> PeekKernalRom;
-		public Func<int, int> PeekMemory;
-		public Func<int, int> PeekSid;
-		public Func<int, int> PeekVic;
-		public Action<int, int> PokeCartridgeLo;
-		public Action<int, int> PokeCartridgeHi;
-		public Action<int, int> PokeCia0;
-		public Action<int, int> PokeCia1;
-		public Action<int, int> PokeColorRam;
-		public Action<int, int> PokeExpansionLo;
-		public Action<int, int> PokeExpansionHi;
-		public Action<int, int> PokeMemory;
-		public Action<int, int> PokeSid;
-		public Action<int, int> PokeVic;
-		public Func<int, int> ReadBasicRom;
-		public Func<int, int> ReadCartridgeLo;
-		public Func<int, int> ReadCartridgeHi;
+		public Func<ushort, byte> PeekBasicRom;
+		public Func<ushort, byte> PeekCartridgeLo;
+		public Func<ushort, byte> PeekCartridgeHi;
+		public Func<ushort, byte> PeekCharRom;
+		public Func<ushort, byte> PeekCia0;
+		public Func<ushort, byte> PeekCia1;
+		public Func<ushort, byte> PeekColorRam;
+		public Func<ushort, byte> PeekExpansionLo;
+		public Func<ushort, byte> PeekExpansionHi;
+		public Func<ushort, byte> PeekKernalRom;
+		public Func<ushort, byte> PeekMemory;
+		public Func<ushort, byte> PeekSid;
+		public Func<ushort, byte> PeekVic;
+		public Action<ushort, byte> PokeCartridgeLo;
+		public Action<ushort, byte> PokeCartridgeHi;
+		public Action<ushort, byte> PokeCia0;
+		public Action<ushort, byte> PokeCia1;
+		public Action<ushort, byte> PokeColorRam;
+		public Action<ushort, byte> PokeExpansionLo;
+		public Action<ushort, byte> PokeExpansionHi;
+		public Action<ushort, byte> PokeMemory;
+		public Action<ushort, byte> PokeSid;
+		public Action<ushort, byte> PokeVic;
+		public Func<ushort, byte> ReadBasicRom;
+		public Func<ushort, byte> ReadCartridgeLo;
+		public Func<ushort, byte> ReadCartridgeHi;
 		public Func<bool> ReadCharen;
-		public Func<int, int> ReadCharRom;
-		public Func<int, int> ReadCia0;
-		public Func<int, int> ReadCia1;
-		public Func<int, int> ReadColorRam;
-		public Func<int, int> ReadExpansionLo;
-		public Func<int, int> ReadExpansionHi;
+		public Func<ushort, byte> ReadCharRom;
+		public Func<ushort, byte> ReadCia0;
+		public Func<ushort, byte> ReadCia1;
+		public Func<ushort, byte> ReadColorRam;
+		public Func<ushort, byte> ReadExpansionLo;
+		public Func<ushort, byte> ReadExpansionHi;
 		public Func<bool> ReadExRom;
 		public Func<bool> ReadGame;
 		public Func<bool> ReadHiRam;
-		public Func<int, int> ReadKernalRom;
+		public Func<ushort, byte> ReadKernalRom;
 		public Func<bool> ReadLoRam;
-		public Func<int, int> ReadMemory;
-		public Func<int, int> ReadSid;
-		public Func<int, int> ReadVic;
-		public Action<int, int> WriteCartridgeLo;
-		public Action<int, int> WriteCartridgeHi;
-		public Action<int, int> WriteCia0;
-		public Action<int, int> WriteCia1;
-		public Action<int, int> WriteColorRam;
-		public Action<int, int> WriteExpansionLo;
-		public Action<int, int> WriteExpansionHi;
-		public Action<int, int> WriteMemory;
-		public Action<int, int> WriteSid;
-		public Action<int, int> WriteVic;
+		public Func<ushort, byte> ReadMemory;
+		public Func<ushort, byte> ReadSid;
+		public Func<ushort, byte> ReadVic;
+		public Action<ushort, byte> WriteCartridgeLo;
+		public Action<ushort, byte> WriteCartridgeHi;
+		public Action<ushort, byte> WriteCia0;
+		public Action<ushort, byte> WriteCia1;
+		public Action<ushort, byte> WriteColorRam;
+		public Action<ushort, byte> WriteExpansionLo;
+		public Action<ushort, byte> WriteExpansionHi;
+		public Action<ushort, byte> WriteMemory;
+		public Action<ushort, byte> WriteSid;
+		public Action<ushort, byte> WriteVic;
 
 		// ------------------------------------
 		private enum PlaBank
@@ -94,7 +94,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		private bool _a13;
 		private bool _a12;
 
-		private PlaBank Bank(int addr, bool read)
+		private PlaBank Bank(ushort addr, bool read)
 		{
 			_loram = ReadLoRam();
 			_hiram = ReadHiRam();
@@ -195,7 +195,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			return PlaBank.Ram;
 		}
 
-		public int Peek(int addr)
+		public byte Peek(ushort addr)
 		{
 			switch (Bank(addr, true))
 			{
@@ -230,7 +230,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			return 0xFF;
 		}
 
-		public void Poke(int addr, int val)
+		public void Poke(ushort addr, byte val)
 		{
 			switch (Bank(addr, false))
 			{
@@ -267,7 +267,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			}
 		}
 
-		public int Read(int addr)
+		public byte Read(ushort addr)
 		{
 			switch (Bank(addr, true))
 			{
@@ -320,7 +320,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			ser.Sync(nameof(_a12), ref _a12);
 		}
 
-		public int VicRead(int addr)
+		public byte VicRead(ushort addr)
 		{
 			_game = ReadGame();
 			_exrom = ReadExRom();
@@ -343,7 +343,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			return ReadMemory(addr);
 		}
 
-		public void Write(int addr, int val)
+		public void Write(ushort addr, byte val)
 		{
 			switch (Bank(addr, false))
 			{

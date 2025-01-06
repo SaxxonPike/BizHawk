@@ -8,7 +8,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge;
 
 public abstract class CartridgeDevice
 {
-	public Func<int> ReadOpenBus;
+	public Func<byte> ReadOpenBus;
 
 	public static CartridgeDevice Load(byte[] crtFile)
 	{
@@ -66,58 +66,58 @@ public abstract class CartridgeDevice
 
 	public bool NMI => pinNMI;
 
-	public virtual int Peek8000(int addr)
+	public virtual byte Peek8000(ushort addr)
 	{
 		return ReadOpenBus();
 	}
 
-	public virtual int PeekA000(int addr)
+	public virtual byte PeekA000(ushort addr)
 	{
 		return ReadOpenBus();
 	}
 
-	public virtual int PeekDE00(int addr)
+	public virtual byte PeekDE00(ushort addr)
 	{
 		return ReadOpenBus();
 	}
 
-	public virtual int PeekDF00(int addr)
+	public virtual byte PeekDF00(ushort addr)
 	{
 		return ReadOpenBus();
 	}
 
-	public virtual void Poke8000(int addr, int val)
+	public virtual void Poke8000(ushort addr, byte val)
 	{
 	}
 
-	public virtual void PokeA000(int addr, int val)
+	public virtual void PokeA000(ushort addr, byte val)
 	{
 	}
 
-	public virtual void PokeDE00(int addr, int val)
+	public virtual void PokeDE00(ushort addr, byte val)
 	{
 	}
 
-	public virtual void PokeDF00(int addr, int val)
+	public virtual void PokeDF00(ushort addr, byte val)
 	{
 	}
 
-	public virtual int Read8000(int addr)
-	{
-		return ReadOpenBus();
-	}
-
-	public virtual int ReadA000(int addr)
+	public virtual byte Read8000(ushort addr)
 	{
 		return ReadOpenBus();
 	}
 
-	public virtual int ReadDE00(int addr)
+	public virtual byte ReadA000(ushort addr)
 	{
 		return ReadOpenBus();
 	}
 
-	public virtual int ReadDF00(int addr)
+	public virtual byte ReadDE00(ushort addr)
+	{
+		return ReadOpenBus();
+	}
+
+	public virtual byte ReadDF00(ushort addr)
 	{
 		return ReadOpenBus();
 	}
@@ -137,19 +137,19 @@ public abstract class CartridgeDevice
 		SyncStateInternal(ser);
 	}
 
-	public virtual void Write8000(int addr, int val)
+	public virtual void Write8000(ushort addr, byte val)
 	{
 	}
 
-	public virtual void WriteA000(int addr, int val)
+	public virtual void WriteA000(ushort addr, byte val)
 	{
 	}
 
-	public virtual void WriteDE00(int addr, int val)
+	public virtual void WriteDE00(ushort addr, byte val)
 	{
 	}
 
-	public virtual void WriteDF00(int addr, int val)
+	public virtual void WriteDF00(ushort addr, byte val)
 	{
 	}
 

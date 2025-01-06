@@ -4,8 +4,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 {
 	public sealed class LatchedPort
 	{
-		public int Direction;
-		public int Latch;
+		public byte Direction;
+		public byte Latch;
 
 		public LatchedPort()
 		{
@@ -25,14 +25,14 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		// cause the pull-up resistors not to be enough to keep the bus bit set to 1 when
 		// both the direction and latch are 1 (the keyboard and joystick port 2 can do this.)
 		// the class does not handle this case as it must be handled differently in every occurrence.
-		public int ReadInput(int bus)
+		public byte ReadInput(byte bus)
 		{
-			return (Latch & Direction) | ((Direction ^ 0xFF) & bus);
+			return unchecked((byte)((Latch & Direction) | ((Direction ^ 0xFF) & bus)));
 		}
 
-		public int ReadOutput()
+		public byte ReadOutput()
 		{
-			return (Latch & Direction) | (Direction ^ 0xFF);
+			return unchecked((byte)((Latch & Direction) | (Direction ^ 0xFF)));
 		}
 
 		public void SyncState(Serializer ser)

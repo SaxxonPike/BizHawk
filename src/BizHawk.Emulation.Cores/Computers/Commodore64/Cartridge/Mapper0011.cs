@@ -20,18 +20,18 @@ internal class Mapper0011 : Mapper000F
 		// Nothing to save
 	}
 
-	public override void PokeDE00(int addr, int val)
+	public override void PokeDE00(ushort addr, byte val)
 	{
 		// do nothing
 	}
 
-	public override int ReadDE00(int addr)
+	public override byte ReadDE00(ushort addr)
 	{
-		BankSet(addr);
+		BankSet(unchecked((byte) addr));
 		return base.ReadDE00(addr);
 	}
 
-	public override void WriteDE00(int addr, int val)
+	public override void WriteDE00(ushort addr, byte val)
 	{
 		// do nothing
 	}

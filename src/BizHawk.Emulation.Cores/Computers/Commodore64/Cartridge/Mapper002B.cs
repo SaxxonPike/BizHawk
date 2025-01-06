@@ -40,34 +40,34 @@ internal class Mapper002B : CartridgeDevice
 		_romOffset = 0;
 	}
 
-	public override int Peek8000(int addr)
+	public override byte Peek8000(ushort addr)
 	{
-		return _romOffset | (addr & 0x1FFF);
+		return _rom[_romOffset | (addr & 0x1FFF)];
 	}
 
-	public override int PeekDF00(int addr)
+	public override byte PeekDF00(ushort addr)
 	{
 		// For debugging only. The processor does not see this.
-		return ((_romOffset >> 13) & 0x1F) | (_romEnabled ? 0x20 : 0x00);
+		return unchecked((byte) (((_romOffset >> 13) & 0x1F) | (_romEnabled ? 0x20 : 0x00)));
 	}
 
-	public override void PokeDF00(int addr, int val)
+	public override void PokeDF00(ushort addr, byte val)
 	{
 		_romOffset = (val & 0x1F) << 13;
 		_romEnabled = (val & 0x20) != 0;
 	}
 
-	public override int Read8000(int addr)
+	public override byte Read8000(ushort addr)
 	{
-		return _romOffset | (addr & 0x1FFF);
+		return _rom[_romOffset | (addr & 0x1FFF)];
 	}
 
-	public override int ReadDF00(int addr)
+	public override byte ReadDF00(ushort addr)
 	{
 		return 0x00;
 	}
 
-	public override void WriteDF00(int addr, int val)
+	public override void WriteDF00(ushort addr, byte val)
 	{
 		_romOffset = (val & 0x1F) << 13;
 		_romEnabled = (val & 0x20) != 0;

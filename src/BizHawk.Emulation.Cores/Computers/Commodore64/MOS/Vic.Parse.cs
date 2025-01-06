@@ -32,7 +32,7 @@
 		private const int AddressMaskEc = 0x39FF;
 		private const int AddressMaskRefresh = 0x3F00;
 
-		private int _parseAddr;
+		private ushort _parseAddr;
 		private int _parseCycleBaSprite0;
 		private int _parseCycleBaSprite1;
 		private int _parseCycleBaSprite2;
@@ -71,7 +71,7 @@
 					{
 						if (_badline)
 						{
-							_parseAddr = _pointerVm | _vc;
+							_parseAddr = unchecked((ushort) (_pointerVm | _vc));
 							_dataC = _baCount >= 0 ? 0xFF : ReadMemory(_parseAddr);
 							_dataC |= (ReadColorRam(_parseAddr) & 0xF) << 8;
 							_bufferC[_vmli] = _dataC;
@@ -92,9 +92,9 @@
 					if (!_idle)
 					{
 						if (_bitmapMode)
-							_parseAddr = _rc | (_vc << 3) | ((_pointerCb & 0x4) << 11);
+							_parseAddr = unchecked((ushort)(_rc | (_vc << 3) | ((_pointerCb & 0x4) << 11)));
 						else
-							_parseAddr = _rc | ((_dataC & 0xFF) << 3) | (_pointerCb << 11);
+							_parseAddr = unchecked((ushort)(_rc | ((_dataC & 0xFF) << 3) | (_pointerCb << 11)));
 					}
 
 					if (_extraColorMode)
@@ -203,7 +203,7 @@
 				case FetchTypeRefresh:
 					// fetch R
 					_refreshCounter = (_refreshCounter - 1) & 0xFF;
-					_parseAddr = AddressMaskRefresh | _refreshCounter;
+					_parseAddr = unchecked((ushort) (AddressMaskRefresh | _refreshCounter));
 					ReadMemory(_parseAddr);
 					break;
 				case FetchTypeIdle:
@@ -215,7 +215,7 @@
 					if ((_parseFetch & 0xF0) == 0) // sprite rule 5
 					{
 						// fetch P
-						_parseAddr = 0x3F8 | _pointerVm | _parseCycleFetchSpriteIndex;
+						_parseAddr = unchecked((ushort) (0x3F8 | _pointerVm | _parseCycleFetchSpriteIndex));
 						_sprites[_parseCycleFetchSpriteIndex].Pointer = ReadMemory(_parseAddr);
 						_sprites[_parseCycleFetchSpriteIndex].ShiftEnable = false;
 					}
@@ -225,7 +225,7 @@
 						var spr = _sprites[_parseCycleFetchSpriteIndex];
 						if (spr.Dma)
 						{
-							_parseAddr = spr.Mc | (spr.Pointer << 6);
+							_parseAddr = unchecked((ushort) (spr.Mc | (spr.Pointer << 6)));
 							spr.Sr |= ReadMemory(_parseAddr) << ((0x30 - (_parseFetch & 0x30)) >> 1);
 							spr.Mc = (spr.Mc + 1) & 0x3F;
 							spr.Loaded |= 0x800000;
