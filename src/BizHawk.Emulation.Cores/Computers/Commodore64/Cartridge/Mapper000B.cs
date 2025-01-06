@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-
+using System.Linq;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
@@ -12,24 +12,14 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	// and then disables once loaded.
 	internal sealed class Mapper000B : CartridgeDevice
 	{
-		private readonly int[] _rom = new int[0x4000];
+		private readonly byte[] _rom = new byte[0x4000];
 
-		public Mapper000B(IList<int> newAddresses, IList<int[]> newData)
+		public Mapper000B(IEnumerable<CartridgeChip> chips)
 		{
 			validCartridge = false;
-
-			for (var i = 0; i < 0x4000; i++)
-			{
-				_rom[i] = 0xFF;
-			}
-
-			if (newAddresses[0] != 0x8000)
-			{
-				return;
-			}
-
-			Array.Copy(newData[0], _rom, Math.Min(newData[0].Length, 0x4000));
-			validCartridge = true;
+			_rom.AsSpan().Fill(0xFF);
+			var data = chips.Single(x => x.Address == 0x8000 && x.Bank == 0);
+			data.ConvertDataToBytes().AsSpan().CopyTo(_rom);
 		}
 
 		protected override void SyncStateInternal(Serializer ser)

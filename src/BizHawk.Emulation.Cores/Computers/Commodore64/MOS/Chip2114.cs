@@ -5,7 +5,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 	// used as Color RAM in C64
 	public sealed class Chip2114
 	{
-		private int[] _ram = new int[0x400];
+		private byte[] _ram = new byte[0x400];
 
 		public Chip2114()
 		{
@@ -14,10 +14,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 
 		public void HardReset()
 		{
-			for (var i = 0; i < 0x400; i++)
-			{
-				_ram[i] = 0x0;
-			}
+			_ram.AsSpan().Clear();
 		}
 
 		public int Peek(int addr)
@@ -27,7 +24,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 
 		public void Poke(int addr, int val)
 		{
-			_ram[addr & 0x3FF] = val & 0xF;
+			_ram[addr & 0x3FF] = unchecked((byte)(val & 0xF));
 		}
 
 		public int Read(int addr)
@@ -47,7 +44,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 
 		public void Write(int addr, int val)
 		{
-			_ram[addr & 0x3FF] = val & 0xF;
+			_ram[addr & 0x3FF] = unchecked((byte) (val & 0xF));
 		}
 	}
 }

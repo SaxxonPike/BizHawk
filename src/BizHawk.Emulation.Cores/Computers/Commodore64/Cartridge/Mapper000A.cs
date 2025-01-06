@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using BizHawk.Common;
+using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 {
@@ -15,13 +16,14 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		// This constant differs depending on whose research you reference. TODO: Verify.
 		private const int RESET_CAPACITOR_CYCLES = 512;
 
-		private readonly int[] _rom;
+		private readonly byte[] _rom;
 		private int _capacitorCycles;
 
-		public Mapper000A(IList<int[]> newData)
+		public Mapper000A(IEnumerable<CartridgeChip> newData)
 		{
-			_rom = new int[0x2000];
-			Array.Copy(newData.First(), _rom, 0x2000);
+			_rom = new byte[0x2000];
+			var data = newData.Single(x => x.Address == 0x8000 && x.Bank == 0);
+			data.ConvertDataToBytes().CopyTo(_rom.AsSpan());
 			pinGame = true;
 		}
 
@@ -75,6 +77,17 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		public override int ReadDF00(int addr)
 		{
 			return _rom[(addr & 0xFF) | 0x1F00];
+		}
+
+		public override IEnumerable<MemoryDomain> CreateMemoryDomains()
+		{
+			yield return new MemoryDomainByteArray(
+				name: "ROM Image",
+				endian: MemoryDomain.Endian.Little,
+				data: _rom,
+				writable: false,
+				wordSize: 1
+			);
 		}
 	}
 }

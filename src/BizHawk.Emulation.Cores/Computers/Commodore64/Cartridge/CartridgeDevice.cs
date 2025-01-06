@@ -88,10 +88,10 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 					result = new Mapper0008(chipData);
 					break;
 				case 0x000A:    // Epyx FastLoad
-					result = new Mapper000A(chipData);
+					result = new Mapper000A(BuildChipList(chipAddress, chipBank, chipData));
 					break;
 				case 0x000B:    // Westermann Learning
-					result = new Mapper000B(chipAddress, chipData);
+					result = new Mapper000B(BuildChipList(chipAddress, chipBank, chipData));
 					break;
 				case 0x000F:    // C64 Game System / System 3
 					result = new Mapper000F(chipAddress, chipBank, chipData);
