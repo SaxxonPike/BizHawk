@@ -72,6 +72,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			_device.ReadMasterData = () => ReadMasterData();
 		}
 
+		public ISaveRam SaveRam => _connected ? _device as ISaveRam : null;
+		
 		public IDriveLight DriveLight => _connected ? _device as IDriveLight : null;
 		
 		public bool IsConnected => _connected;

@@ -32,7 +32,16 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 			if (_board.DiskDrive != null)
 			{
 				_board.DiskDrive.InitSaveRam(_roms.Count);
-				ser.Register<ISaveRam>(_board.DiskDrive);
+			}
+
+			if (_board.Serial.SaveRam is { } serialSaveRam)
+			{
+				ser.Register<ISaveRam>(serialSaveRam);
+			}
+			
+			if (_board.Serial.DriveLight is { } serialDriveLight)
+			{
+				ser.Register<IDriveLight>(serialDriveLight);
 			}
 
 			InitMedia(_roms[_currentDisk]);
@@ -42,9 +51,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 				ser.Register<ISaveRam>(cartSaveRam);
 			}
 
-			if (_board.CartPort.DriveLight is { } driveLight)
+			if (_board.CartPort.DriveLight is { } cartDriveLight)
 			{
-				ser.Register<IDriveLight>(driveLight);
+				ser.Register<IDriveLight>(cartDriveLight);
 			}
 			
 			HardReset();
