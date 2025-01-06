@@ -12,24 +12,25 @@
 		private static readonly int HblankStart = (0x178 + HblankOffset) % ScanWidth;
 		private static readonly int HblankEnd = (0x1F0 + HblankOffset) % ScanWidth;
 
-		private static readonly int[] Timing = Vic.TimingBuilder_XRaster(0x194, 0x1F8, ScanWidth, -1, -1);
-		private static readonly int[] Fetch = Vic.TimingBuilder_Fetch(Timing, 0x164);
-		private static readonly int[] Ba = Vic.TimingBuilder_BA(Fetch);
-		private static readonly int[] Act = Vic.TimingBuilder_Act(Timing, 0x004, 0x14C, 0x164);
+		private static int[] GetTiming() => Vic.TimingBuilder_XRaster(0x194, 0x1F8, ScanWidth, -1, -1);
+		private static int[] GetFetch(int[] timing) => Vic.TimingBuilder_Fetch(timing, 0x164);
+		private static int[] GetBa(int[] fetch) => Vic.TimingBuilder_BA(fetch);
+		private static int[] GetAct(int[] timing) => Vic.TimingBuilder_Act(timing, 0x004, 0x14C, 0x164);
 
-		private static readonly int[][] Pipeline =
+		private static int[][] GetPipeline()
 		{
-			Timing,
-			Fetch,
-			Ba,
-			Act
-		};
+			var timing = GetTiming();
+			var fetch = GetFetch(timing);
+			var ba = GetBa(fetch);
+			var act = GetAct(timing);
+			return [ timing, fetch, ba, act ];
+		}
 
 		public static Vic Create(C64.BorderType borderType)
 		{
 			return new Vic(
 				Cycles, Lines,
-				Pipeline,
+				GetPipeline(),
 				17734472 / 18,
 				HblankStart, HblankEnd,
 				VblankStart, VblankEnd,
