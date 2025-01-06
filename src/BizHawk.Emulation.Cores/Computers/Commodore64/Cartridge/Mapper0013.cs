@@ -15,9 +15,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	internal sealed class Mapper0013 : CartridgeDevice
 	{
 		private const int BankSize = 0x2000;
-		private const byte DummyData = 0xFF;
 
-		private readonly byte[][] _banks = new byte[128][];
+		private readonly byte[][] _banks;
 
 		private readonly byte _bankMask;
 		private readonly int _bankCount;
@@ -31,48 +30,10 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			pinExRom = false;
 			_romEnable = true;
 
-			// This bank will be chosen if uninitialized.
-			var dummyBank = new byte[BankSize];
-			dummyBank.AsSpan().Fill(DummyData);
-			_banks.AsSpan().Fill(dummyBank);
-			_bankMask = 0x00;
-
-			// Load in each bank.
-			var maxBank = 0;
-			foreach (var chip in chips)
-			{
-				// Maximum 128 banks.
-				if (chip.Bank is > 0x7F or < 0x00)
-				{
-					throw new Exception("Cartridge image has an invalid bank");
-				}
-				
-				// Addresses other than 0x8000 are not supported.
-				if (chip.Address != 0x8000)
-				{
-					continue;
-				}
-
-				// Bank wrap-around is based on powers of 2.
-				while (chip.Bank > _bankMask)
-				{
-					_bankMask = unchecked((byte) ((_bankMask << 1) | 1));
-				}
-				
-				var bank = new byte[BankSize];
-
-				bank.AsSpan().Fill(DummyData);
-				chip.ConvertDataToBytes().CopyTo(bank.AsSpan());
-
-				_banks[chip.Bank] = bank;
-
-				if (chip.Bank > maxBank)
-				{
-					maxBank = chip.Bank;
-				}
-			}
-
-			_bankCount = maxBank + 1;
+			var banks = LoadRomBanks(chips)[0x8000];
+			_bankMask = banks.Mask;
+			_banks = banks.Data;
+			_bankCount = _bankMask + 1;
 
 			// Start with bank 0.
 			BankSet(0);

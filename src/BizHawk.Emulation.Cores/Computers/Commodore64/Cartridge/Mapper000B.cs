@@ -14,7 +14,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	{
 		private readonly byte[] _rom = new byte[0x4000];
 
-		public Mapper000B(IEnumerable<CartridgeChip> chips)
+		public Mapper000B(IReadOnlyList<CartridgeChip> chips)
 		{
 			validCartridge = false;
 			_rom.AsSpan().Fill(0xFF);

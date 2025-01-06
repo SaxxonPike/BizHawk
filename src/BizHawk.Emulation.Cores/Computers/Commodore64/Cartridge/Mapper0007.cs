@@ -1,18 +1,19 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 {
 	internal sealed class Mapper0007 : CartridgeDevice
 	{
-		private readonly int[,] _banks = new int[16, 0x2000]; 
+		private readonly byte[][] _banks; 
 
-		private int _bankNumber;
+		private byte _bankNumber;
 		private bool _disabled;
 
 		// Fun Play mapper
 		// bank switching is done from DE00
-		public Mapper0007(IList<int[]> newData, bool game, bool exrom)
+		public Mapper0007(IEnumerable<CartridgeChip> chips, bool game, bool exrom)
 		{
 			pinGame = game;
 			pinExRom = exrom;
@@ -20,12 +21,15 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			_disabled = false;
 
 			// load data into the banks from the list
-			for (var j = 0; j < 16; j++)
+			var dummyBank = new byte[0x2000];
+			dummyBank.AsSpan().Fill(0xFF);
+			_banks = new byte[16][];
+			
+			foreach (var chip in chips)
 			{
-				for (var i = 0; i < 0x2000; i++)
-				{
-					_banks[j, i] = newData[j][i];
-				}
+				var bank = new byte[0x2000];
+				_banks[chip.Bank] = bank;
+				chip.ConvertDataToBytes().AsSpan().CopyTo(bank.AsSpan());
 			}
 
 			_bankNumber = 0;
@@ -41,7 +45,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		{
 			if (!_disabled)
 			{
-				return _banks[_bankNumber, addr];
+				return _banks[_bankNumber][addr];
 			}
 
 			return base.Read8000(addr);
@@ -65,7 +69,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		{
 			if (!_disabled)
 			{
-				return _banks[_bankNumber, addr];
+				return _banks[_bankNumber][addr];
 			}
 
 			return base.Read8000(addr);

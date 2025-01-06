@@ -19,7 +19,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 		private readonly byte[] _rom;
 		private int _capacitorCycles;
 
-		public Mapper000A(IEnumerable<CartridgeChip> newData)
+		public Mapper000A(IReadOnlyList<CartridgeChip> newData)
 		{
 			_rom = new byte[0x2000];
 			var data = newData.Single(x => x.Address == 0x8000 && x.Bank == 0);

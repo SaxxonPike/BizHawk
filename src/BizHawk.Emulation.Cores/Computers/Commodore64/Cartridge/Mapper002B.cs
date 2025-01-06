@@ -11,24 +11,20 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	// Thanks to VICE team for the info: http://vice-emu.sourceforge.net/vice_15.html
 	internal class Mapper002B : CartridgeDevice
 	{
-		private readonly int[] _rom;
+		private readonly byte[] _rom;
 
 		private int _romOffset;
 		private bool _romEnabled;
 
-		public Mapper002B(IList<int> newAddresses, IList<int> newBanks, IList<int[]> newData)
+		public Mapper002B(IReadOnlyList<CartridgeChip> chips)
 		{
 			pinExRom = false;
 			pinGame = true;
-			_rom = new int[0x40000];
-			Array.Copy(newData.First(), _rom, 0x2000);
-			pinGame = true;
-			for (var i = 0; i < newData.Count; i++)
+			_rom = new byte[0x40000];
+			
+			foreach (var chip in chips)
 			{
-				if (newAddresses[i] == 0x8000)
-				{
-					Array.Copy(newData[i], 0, _rom, newBanks[i] * 0x2000, 0x2000);
-				}
+				chip.ConvertDataToBytes().CopyTo(_rom.AsSpan(chip.Bank * 0x2000));
 			}
 		}
 

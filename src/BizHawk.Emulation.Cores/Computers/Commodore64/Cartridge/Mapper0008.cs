@@ -5,7 +5,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 {
 	internal sealed class Mapper0008 : CartridgeDevice
 	{
-		private readonly int[,] _banks = new int[4, 0x4000]; 
+		private readonly byte[][] _banks;
 
 		private int _bankMask;
 		private int _bankNumber;
@@ -14,7 +14,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		// SuperGame mapper
 		// bank switching is done from DF00
-		public Mapper0008(IList<int[]> newData)
+		public Mapper0008(IEnumerable<CartridgeChip> chips)
 		{
 			pinGame = false;
 			pinExRom = false;
@@ -23,13 +23,17 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			_disabled = false;
 			_latchedval = 0;
 
+			var dummyBank = new byte[0x4000];
+			dummyBank.AsSpan().Fill(0xFF);
+			_banks = new byte[4][];
+			_banks.AsSpan().Fill(dummyBank);
+
 			// load data into the banks from the list
-			for (var j = 0; j < 4; j++)
+			foreach (var chip in chips)
 			{
-				for (var i = 0; i < 0x4000; i++)
-				{
-					_banks[j, i] = newData[j][i];
-				}
+				var bank = new byte[0x4000];
+				_banks[chip.Bank] = bank;
+				chip.ConvertDataToBytes().CopyTo(bank.AsSpan());
 			}
 
 			BankSet(0);
@@ -62,12 +66,12 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		public override int Peek8000(int addr)
 		{
-			return _banks[_bankNumber, addr];
+			return _banks[_bankNumber][addr];
 		}
 
 		public override int PeekA000(int addr)
 		{
-			return _banks[_bankNumber, addr + 0x2000];
+			return _banks[_bankNumber][addr + 0x2000];
 		}
 
 		public override void PokeDF00(int addr, int val)
@@ -80,12 +84,12 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		public override int Read8000(int addr)
 		{
-				return _banks[_bankNumber, addr];
+				return _banks[_bankNumber][addr];
 		}
 
 		public override int ReadA000(int addr)
 		{
-				return _banks[_bankNumber, addr + 0x2000];
+				return _banks[_bankNumber][addr + 0x2000];
 		}
 
 		public override void WriteDF00(int addr, int val)

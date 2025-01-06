@@ -9,8 +9,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 	// This is why mapper 0011 inherits directly from 000F.
 	internal class Mapper0011 : Mapper000F
 	{
-		public Mapper0011(IList<int> newAddresses, IList<int> newBanks, IList<int[]> newData)
-			: base(newAddresses, newBanks, newData)
+		public Mapper0011(IReadOnlyList<CartridgeChip> chips)
+			: base(chips)
 		{
 			// required to pass information to base class
 		}

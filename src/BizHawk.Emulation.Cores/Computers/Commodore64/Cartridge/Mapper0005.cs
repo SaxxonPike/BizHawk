@@ -1,108 +1,96 @@
 using System.Collections.Generic;
-
+using System.Linq;
 using BizHawk.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 {
 	internal sealed class Mapper0005 : CartridgeDevice
 	{
-		private readonly int[][] _banksA; // 8000
+		private readonly byte[][] _banksA; // 8000
 
-		private readonly int[][] _banksB = new int[0][]; // A000
+		private readonly byte[][] _banksB = new byte[0][]; // A000
 
-		private int _bankMask;
+		private byte _bankMask;
 
-		private int _bankNumber;
+		private byte _bankNumber;
 
-		private int[] _currentBankA;
+		private byte[] _currentBankA;
 
-		private int[] _currentBankB;
+		private byte[] _currentBankB;
 
-		private readonly int[] _dummyBank;
+		private readonly byte[] _dummyBank;
 
-		public Mapper0005(IList<int> newAddresses, IList<int> newBanks, IList<int[]> newData)
+		public Mapper0005(IReadOnlyList<CartridgeChip> chips)
 		{
-			var count = newAddresses.Count;
-
 			// build dummy bank
-			_dummyBank = new int[0x2000];
-			for (var i = 0; i < 0x2000; i++)
-			{
-				_dummyBank[i] = 0xFF; // todo: determine if this is correct
-			}
+			_dummyBank = new byte[0x2000];
+			_dummyBank.AsSpan().Fill(0xFF);
 
-			switch (count)
+			switch (chips.Count)
 			{
 				case 64:
 					pinGame = true;
 					pinExRom = false;
 					_bankMask = 0x3F;
-					_banksA = new int[64][];
+					_banksA = new byte[64][];
 					break;
 				case 32:
 					// this specific config is a weird exception
 					pinGame = false;
 					pinExRom = false;
 					_bankMask = 0x0F;
-					_banksA = new int[16][];
-					_banksB = new int[16][];
+					_banksA = new byte[16][];
+					_banksB = new byte[16][];
 					break;
 				case 16:
 					pinGame = true;
 					pinExRom = false;
 					_bankMask = 0x0F;
-					_banksA = new int[16][];
+					_banksA = new byte[16][];
 					break;
 				case 8:
 					pinGame = true;
 					pinExRom = false;
 					_bankMask = 0x07;
-					_banksA = new int[8][];
+					_banksA = new byte[8][];
 					break;
 				case 4:
 					pinGame = true;
 					pinExRom = false;
 					_bankMask = 0x03;
-					_banksA = new int[4][];
+					_banksA = new byte[4][];
 					break;
 				case 2:
 					pinGame = true;
 					pinExRom = false;
 					_bankMask = 0x01;
-					_banksA = new int[2][];
+					_banksA = new byte[2][];
 					break;
 				case 1:
 					pinGame = true;
 					pinExRom = false;
 					_bankMask = 0x00;
-					_banksA = new int[1][];
+					_banksA = new byte[1][];
 					break;
 				default:
 					throw new Exception("This looks like an Ocean cartridge but cannot be loaded...");
 			}
 
 			// for safety, initialize all banks to dummy
-			for (var i = 0; i < _banksA.Length; i++)
-			{
-				_banksA[i] = _dummyBank;
-			}
-
-			for (var i = 0; i < _banksB.Length; i++)
-			{
-				_banksB[i] = _dummyBank;
-			}
+			_banksA.AsSpan().Fill(_dummyBank);
+			_banksB.AsSpan().Fill(_dummyBank);
 
 			// now load in the banks
-			for (var i = 0; i < count; i++)
+			foreach (var chip in chips)
 			{
-				switch (newAddresses[i])
+				switch (chip.Address)
 				{
 					case 0x8000:
-						_banksA[newBanks[i] & _bankMask] = newData[i];
+						_banksA[chip.Bank & _bankMask] = chip.ConvertDataToBytes();
 						break;
 					case 0xA000:
 					case 0xE000:
-						_banksB[newBanks[i] & _bankMask] = newData[i];
+						_banksB[chip.Bank & _bankMask] = chip.ConvertDataToBytes();
 						break;
 				}
 			}
@@ -123,7 +111,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		private void BankSet(int index)
 		{
-			_bankNumber = index & _bankMask;
+			_bankNumber = unchecked((byte) (index & _bankMask));
 			_currentBankA = !pinExRom ? _banksA[_bankNumber] : _dummyBank;
 			_currentBankB = !pinGame ? _banksB[_bankNumber] : _dummyBank;
 		}

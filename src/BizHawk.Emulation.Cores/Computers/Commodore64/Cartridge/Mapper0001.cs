@@ -6,23 +6,24 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 {
 	internal sealed class Mapper0001 : CartridgeDevice
 	{
-		private int[] _ram = new int[0x2000];
+		private byte[] _ram = new byte[0x2000];
 		private bool _ramEnabled;
 
-		private readonly int[] _rom = new int[0x8000];
+		private readonly byte[] _rom = new byte[0x8000];
 
 		private int _romOffset;
 		private bool _cartEnabled;
 
-		public Mapper0001(IList<int> newAddresses, IList<int> newBanks, IList<int[]> newData)
+		public Mapper0001(IReadOnlyList<CartridgeChip> chips)
 		{
 			pinExRom = false;
 			pinGame = false;
-			for (var i = 0; i < newData.Count; i++)
+
+			foreach (var chip in chips)
 			{
-				if (newAddresses[i] == 0x8000)
+				if (chip.Address == 0x8000)
 				{
-					Array.Copy(newData[i], 0, _rom, 0x2000 * newBanks[i], 0x2000);
+					chip.ConvertDataToBytes().CopyTo(_rom.AsSpan(0x2000 * chip.Bank));
 				}
 			}
 
@@ -43,10 +44,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			base.HardReset();
 			pinExRom = false;
 			pinGame = false;
-			for (var i = 0; i < 0x2000; i++)
-			{
-				_ram[i] = 0x00;
-			}
+			_ram.AsSpan().Clear();
 
 			_romOffset = 0;
 			_cartEnabled = true;
@@ -145,7 +143,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		private void SetLoRom(int addr, int val)
 		{
-			_ram[addr & 0x1FFF] = val;
+			_ram[addr & 0x1FFF] = unchecked((byte) val);
 		}
 
 		private int GetIo2(int addr)
@@ -162,7 +160,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		private void SetIo2(int addr, int val)
 		{
-			_ram[addr & 0x1FFF] = val & 0xFF;
+			_ram[addr & 0x1FFF] = unchecked((byte) (val & 0xFF));
 		}
 	}
 }

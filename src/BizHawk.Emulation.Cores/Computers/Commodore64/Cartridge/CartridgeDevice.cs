@@ -22,7 +22,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 			var chipAddress = new List<int>();
 			var chipBank = new List<int>();
-			var chipData = new List<int[]>();
+			var chipData = new List<byte[]>();
 			var chipType = new List<int>();
 
 			var headerLength = ReadCRTInt(reader);
@@ -56,7 +56,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 				chipBank.Add(ReadCRTShort(reader));
 				chipAddress.Add(ReadCRTShort(reader));
 				var chipDataLength = ReadCRTShort(reader);
-				chipData.Add(reader.ReadBytes(chipDataLength).Select(x => (int)x).ToArray());
+				chipData.Add(reader.ReadBytes(chipDataLength));
 				chipLength -= chipDataLength + 0x10;
 				if (chipLength > 0)
 				{
@@ -69,47 +69,48 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 				return null;
 			}
 
+			var chips = BuildChipList(chipAddress, chipBank, chipData);
 			CartridgeDevice result;
 			switch (mapper)
 			{
 				case 0x0000:    // Standard Cartridge
-					result = new Mapper0000(chipAddress, chipData, game, exrom);
+					result = new Mapper0000(chips, game, exrom);
 					break;
 				case 0x0001:    // Action Replay (4.2 and up)
-					result = new Mapper0001(chipAddress, chipBank, chipData);
+					result = new Mapper0001(chips);
 					break;
 				case 0x0005:    // Ocean
-					result = new Mapper0005(chipAddress, chipBank, chipData);
+					result = new Mapper0005(chips);
 					break;
 				case 0x0007:    // Fun Play
-					result = new Mapper0007(chipData, game, exrom);
+					result = new Mapper0007(chips, game, exrom);
 					break;
 				case 0x0008:    // SuperGame
-					result = new Mapper0008(chipData);
+					result = new Mapper0008(chips);
 					break;
 				case 0x000A:    // Epyx FastLoad
-					result = new Mapper000A(BuildChipList(chipAddress, chipBank, chipData));
+					result = new Mapper000A(chips);
 					break;
 				case 0x000B:    // Westermann Learning
-					result = new Mapper000B(BuildChipList(chipAddress, chipBank, chipData));
+					result = new Mapper000B(chips);
 					break;
 				case 0x000F:    // C64 Game System / System 3
-					result = new Mapper000F(chipAddress, chipBank, chipData);
+					result = new Mapper000F(chips);
 					break;
 				case 0x0011:    // Dinamic
-					result = new Mapper0011(chipAddress, chipBank, chipData);
+					result = new Mapper0011(chips);
 					break;
 				case 0x0012:    // Zaxxon / Super Zaxxon
-					result = new Mapper0012(chipAddress, chipBank, chipData);
+					result = new Mapper0012(chips);
 					break;
 				case 0x0013:    // Domark
-					result = new Mapper0013(BuildChipList(chipAddress, chipBank, chipData));
+					result = new Mapper0013(chips);
 					break;
 				case 0x0020:    // EasyFlash
-					result = new Mapper0020(BuildChipList(chipAddress, chipBank, chipData));
+					result = new Mapper0020(chips);
 					break;
 				case 0x002B:    // Prophet 64
-					result = new Mapper002B(chipAddress, chipBank, chipData);
+					result = new Mapper002B(chips);
 					break;
 				default:
 					throw new Exception("This cartridge file uses an unrecognized mapper: " + mapper);
@@ -119,7 +120,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 			return result;
 		}
 
-		private static List<CartridgeChip> BuildChipList(IList<int> addresses, IList<int> banks, IList<int[]> data) =>
+		private static List<CartridgeChip> BuildChipList(IList<int> addresses, IList<int> banks, IList<byte[]> data) =>
 			Enumerable.Range(0, addresses.Count)
 				.Select(i => new CartridgeChip
 				{
@@ -264,6 +265,43 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 
 		public virtual void WriteDF00(int addr, int val)
 		{
+		}
+
+		protected Dictionary<int, (byte Mask, byte[][] Data)> LoadRomBanks(IEnumerable<CartridgeChip> chips)
+		{
+			const int bankSize = 0x2000;
+			const byte dummyData = 0xFF;
+			var blocks = new Dictionary<int, (byte Mask, byte[][] Data)>();
+
+			// This bank will be chosen if uninitialized.
+			var dummyBank = new byte[bankSize];
+			dummyBank.AsSpan().Fill(dummyData);
+
+			// Load in each bank.
+			foreach (var chip in chips)
+			{
+				var address = 0x8000 | (chip.Address & 0x3FFF);
+				if (!blocks.TryGetValue(address, out var block))
+				{
+					block = blocks[address] = (Mask: 0x00, Data: new byte[256][]);
+					block.Data.AsSpan().Fill(dummyBank);
+				}
+				
+				// Bank wrap-around is based on powers of 2.
+				var bankMask = block.Mask;
+				while (chip.Bank > bankMask)
+				{
+					bankMask = unchecked((byte) ((bankMask << 1) | 1));
+				}
+
+				var bank = new byte[bankSize];
+				bank.AsSpan().Fill(dummyData);
+				chip.ConvertDataToBytes().CopyTo(bank.AsSpan());
+				block.Data[chip.Bank] = bank;
+				blocks[address] = block with { Mask = bankMask };
+			}
+			
+			return blocks;
 		}
 
 		public virtual IEnumerable<MemoryDomain> CreateMemoryDomains() => 

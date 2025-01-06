@@ -69,13 +69,13 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
 				switch (chip.Address)
 				{
 					case 0x8000:
-						chip.Data.Select(b => unchecked((byte)b))
+						chip.Data
 							.ToArray()
 							.CopyTo(_chipA.Data.Slice(chip.Bank * 0x2000, 0x2000));
 						break;
 					case 0xA000:
 					case 0xE000:
-						chip.Data.Select(b => unchecked((byte)b))
+						chip.Data
 							.ToArray()
 							.CopyTo(_chipB.Data.Slice(chip.Bank * 0x2000, 0x2000));
 						break;
