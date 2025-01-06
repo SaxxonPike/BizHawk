@@ -3,7 +3,7 @@ using BizHawk.Emulation.Common;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 {
-	public sealed class SerialPort : IDriveLight
+	public sealed class SerialPort
 	{
 		public Func<bool> ReadMasterAtn = () => true;
 		public Func<bool> ReadMasterClk = () => true;
@@ -72,10 +72,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			_device.ReadMasterData = () => ReadMasterData();
 		}
 
-		public bool DriveLightEnabled => true;
-		public bool DriveLightOn => ReadDeviceLight();
+		public IDriveLight DriveLight => _connected ? _device as IDriveLight : null;
+		
 		public bool IsConnected => _connected;
-
-		public string DriveLightIconDescription => "Serial Activity";
 	}
 }

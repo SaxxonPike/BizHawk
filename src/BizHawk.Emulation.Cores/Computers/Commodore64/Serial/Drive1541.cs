@@ -8,7 +8,7 @@ using BizHawk.Emulation.Cores.Computers.Commodore64.MOS;
 
 namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 {
-	public sealed partial class Drive1541 : SerialPortDevice, ISaveRam
+	public sealed partial class Drive1541 : SerialPortDevice, ISaveRam, IDriveLight
 	{
 		private Disk _disk;
 		private int _bitHistory;
@@ -21,7 +21,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 		private bool _ledEnabled;
 		private int _motorStep;
 		private readonly MOS6502X<CpuLink> _cpu;
-		private int[] _ram;
+		private byte[] _ram;
 		public readonly Via Via0;
 		public readonly Via Via1;
 		private int _cpuClockNum;
@@ -60,7 +60,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 				NMI = false
 			};
 
-			_ram = new int[0x800];
+			_ram = new byte[0x800];
 			Via0 = Chip6522.Create(ViaReadClock, ViaReadData, ViaReadAtn, 8);
 			Via1 = Chip6522.Create(ReadVia1PrA, ReadVia1PrB);
 

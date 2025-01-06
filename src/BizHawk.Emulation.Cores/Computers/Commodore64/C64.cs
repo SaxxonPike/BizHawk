@@ -41,6 +41,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 			{
 				ser.Register<ISaveRam>(cartSaveRam);
 			}
+
+			if (_board.CartPort.DriveLight is { } driveLight)
+			{
+				ser.Register<IDriveLight>(driveLight);
+			}
 			
 			HardReset();
 
@@ -63,7 +68,6 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64
 			}
 
 			ser.Register<IVideoProvider>(_board.Vic);
-			ser.Register<IDriveLight>(this);
 
 			_tracer = new TraceBuffer(_board.Cpu.TraceHeader);
 			ser.Register<ITraceable>(_tracer);

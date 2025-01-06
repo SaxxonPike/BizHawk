@@ -3,74 +3,73 @@ using System.Linq;
 
 using BizHawk.Common;
 
-namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge
+namespace BizHawk.Emulation.Cores.Computers.Commodore64.Cartridge;
+
+// Prophet 64 cartridge. Because we can.
+// 32 banks of 8KB.
+// DFxx = status register, xxABBBBB. A=enable cart, B=bank
+// Thanks to VICE team for the info: http://vice-emu.sourceforge.net/vice_15.html
+internal class Mapper002B : CartridgeDevice
 {
-	// Prophet 64 cartridge. Because we can.
-	// 32 banks of 8KB.
-	// DFxx = status register, xxABBBBB. A=enable cart, B=bank
-	// Thanks to VICE team for the info: http://vice-emu.sourceforge.net/vice_15.html
-	internal class Mapper002B : CartridgeDevice
+	private readonly byte[] _rom;
+
+	private int _romOffset;
+	private bool _romEnabled;
+
+	public Mapper002B(IReadOnlyList<CartridgeChip> chips)
 	{
-		private readonly byte[] _rom;
-
-		private int _romOffset;
-		private bool _romEnabled;
-
-		public Mapper002B(IReadOnlyList<CartridgeChip> chips)
-		{
-			pinExRom = false;
-			pinGame = true;
-			_rom = new byte[0x40000];
+		pinExRom = false;
+		pinGame = true;
+		_rom = new byte[0x40000];
 			
-			foreach (var chip in chips)
-			{
-				chip.ConvertDataToBytes().CopyTo(_rom.AsSpan(chip.Bank * 0x2000));
-			}
-		}
-
-		protected override void SyncStateInternal(Serializer ser)
+		foreach (var chip in chips)
 		{
-			ser.Sync("RomOffset", ref _romOffset);
-			ser.Sync("RomEnabled", ref _romEnabled);
+			chip.Data.Span.CopyTo(_rom.AsSpan(chip.Bank * 0x2000));
 		}
+	}
 
-		public override void HardReset()
-		{
-			_romEnabled = true;
-			_romOffset = 0;
-		}
+	protected override void SyncStateInternal(Serializer ser)
+	{
+		ser.Sync("RomOffset", ref _romOffset);
+		ser.Sync("RomEnabled", ref _romEnabled);
+	}
 
-		public override int Peek8000(int addr)
-		{
-			return _romOffset | (addr & 0x1FFF);
-		}
+	public override void HardReset()
+	{
+		_romEnabled = true;
+		_romOffset = 0;
+	}
 
-		public override int PeekDF00(int addr)
-		{
-			// For debugging only. The processor does not see this.
-			return ((_romOffset >> 13) & 0x1F) | (_romEnabled ? 0x20 : 0x00);
-		}
+	public override int Peek8000(int addr)
+	{
+		return _romOffset | (addr & 0x1FFF);
+	}
 
-		public override void PokeDF00(int addr, int val)
-		{
-			_romOffset = (val & 0x1F) << 13;
-			_romEnabled = (val & 0x20) != 0;
-		}
+	public override int PeekDF00(int addr)
+	{
+		// For debugging only. The processor does not see this.
+		return ((_romOffset >> 13) & 0x1F) | (_romEnabled ? 0x20 : 0x00);
+	}
 
-		public override int Read8000(int addr)
-		{
-			return _romOffset | (addr & 0x1FFF);
-		}
+	public override void PokeDF00(int addr, int val)
+	{
+		_romOffset = (val & 0x1F) << 13;
+		_romEnabled = (val & 0x20) != 0;
+	}
 
-		public override int ReadDF00(int addr)
-		{
-			return 0x00;
-		}
+	public override int Read8000(int addr)
+	{
+		return _romOffset | (addr & 0x1FFF);
+	}
 
-		public override void WriteDF00(int addr, int val)
-		{
-			_romOffset = (val & 0x1F) << 13;
-			_romEnabled = (val & 0x20) != 0;
-		}
+	public override int ReadDF00(int addr)
+	{
+		return 0x00;
+	}
+
+	public override void WriteDF00(int addr, int val)
+	{
+		_romOffset = (val & 0x1F) << 13;
+		_romEnabled = (val & 0x20) != 0;
 	}
 }
