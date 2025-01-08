@@ -100,6 +100,8 @@
 					if (_extraColorMode)
 						_parseAddr &= AddressMaskEc;
 					_dataG = ReadMemory(_parseAddr);
+					if (_borderOnVertical)
+						_dataG = 0;
 
 					if (!_idle && _vcEnable)
 					{
