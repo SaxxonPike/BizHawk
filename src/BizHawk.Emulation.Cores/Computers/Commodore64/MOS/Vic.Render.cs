@@ -170,12 +170,9 @@
 							}
 							else
 							{
-								if (!_borderOnVertical)
-								{
-									_spr.CollideSprite = true;
-									_sprites[_pixelOwner].CollideSprite = true;
-									_intSpriteCollision = true;
-								}
+								_spr.CollideSprite = true;
+								_sprites[_pixelOwner].CollideSprite = true;
+								_intSpriteCollision = true;
 							}
 
 							// sprite-data collision
