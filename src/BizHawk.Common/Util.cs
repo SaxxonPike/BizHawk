@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -329,6 +330,29 @@ namespace BizHawk.Common
 			{
 				bw.Write(data.Length);
 				bw.Write(data);
+			}
+		}
+
+		public static void WriteBuffer<T>(this BinaryWriter bw, ReadOnlySpan<T> data)
+			where T : struct
+		{
+			if (data.Length == 0)
+			{
+				bw.Write(0);
+			}
+			else
+			{
+				// Until Span<T> support is available in BinaryWriter, need to
+				// rent an array to store the data.
+
+				var bytes = MemoryMarshal.Cast<T, byte>(data);
+				var array = ArrayPool<byte>.Shared.Rent(bytes.Length);
+				bytes.CopyTo(array.AsSpan());
+
+				bw.Write(bytes.Length);
+				bw.Write(array, 0, bytes.Length);
+				
+				ArrayPool<byte>.Shared.Return(array);
 			}
 		}
 	}

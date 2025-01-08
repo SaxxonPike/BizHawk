@@ -250,7 +250,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteBuffer<short>(val);
 			}
 		}
 
@@ -266,7 +266,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteBuffer<ushort>(val);
 			}
 		}
 
@@ -326,7 +326,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteBuffer<int>(val);
 			}
 		}
 
@@ -364,7 +364,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteBuffer<uint>(val);
 			}
 		}
 
@@ -402,7 +402,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteBuffer<float>(val);
 			}
 		}
 
@@ -440,7 +440,7 @@ namespace BizHawk.Common
 			}
 			else
 			{
-				_bw.WriteByteBuffer(val.ToUByteBuffer());
+				_bw.WriteBuffer<double>(val);
 			}
 		}
 
