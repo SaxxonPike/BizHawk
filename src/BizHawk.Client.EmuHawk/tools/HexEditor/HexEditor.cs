@@ -627,7 +627,8 @@ namespace BizHawk.Client.EmuHawk
 			end = Math.Min(end, _domain.Size);
 			end &= -(long)dataSize;
 
-			dict.Clear();
+			// Remove any addresses that don't make sense given the address range and data size
+			dict.RemoveAll(kv => kv.Key < start || kv.Key >= end || kv.Key % dataSize != 0);
 
 			if (end <= start)
 				return dict;
