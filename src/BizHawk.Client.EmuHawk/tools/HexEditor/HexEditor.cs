@@ -538,7 +538,7 @@ namespace BizHawk.Client.EmuHawk
 		private string GenerateAddressString()
 		{
 			var addrStr = new StringBuilder();
-			var numSpaces = _numAddrDigits & ~1;
+			var numSpaces = 8 - (_numAddrDigits & ~1);
 			var hexScrollBarValue = HexScrollBar.Value;
 			var domainSize = _domain.Size;
 
