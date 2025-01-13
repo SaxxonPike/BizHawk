@@ -627,7 +627,7 @@ namespace BizHawk.Client.EmuHawk
 			end = Math.Min(end, _domain.Size);
 			end &= -(long)dataSize;
 
-			dict.RemoveAll(kv => kv.Key < start || kv.Key >= end);
+			dict.Clear();
 
 			if (end <= start)
 				return dict;
