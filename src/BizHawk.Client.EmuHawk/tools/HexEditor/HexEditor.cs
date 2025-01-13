@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -619,41 +620,45 @@ namespace BizHawk.Client.EmuHawk
 			end = Math.Min(end, _domain.Size);
 			end &= -(long)dataSize;
 
-			var dict = new Dictionary<long, long>();
+			var dict = new Dictionary<long, long>((int) ((end - start) / dataSize));
 
 			if (end <= start)
 				return dict;
 
 			var range = start.RangeToExclusive(end);
+			var valsSize = end - start;
 
 			switch (dataSize)
 			{
 				default:
 				case 1:
 				{
-					var vals = new byte[end - start];
+					byte[] vals = ArrayPool<byte>.Shared.Rent((int) valsSize);
 					_domain.BulkPeekByte(range, vals);
 					int i = 0;
 					for (var addr = start; addr < end; addr += dataSize)
 						dict.Add(addr, vals[i++]);
+					ArrayPool<byte>.Shared.Return(vals);
 					break;
 				}
 				case 2:
 				{
-					var vals = new ushort[(end - start) >> 1];
+					ushort[] vals = new ushort[(int)(valsSize >> 1)];
 					_domain.BulkPeekUshort(range, BigEndian, vals);
 					int i = 0;
 					for (var addr = start; addr < end; addr += dataSize)
 						dict.Add(addr, vals[i++]);
+					ArrayPool<ushort>.Shared.Return(vals);
 					break;
 				}
 				case 4:
 				{
-					var vals = new uint[(end - start) >> 2];
+					uint[] vals = new uint[(int)(valsSize >> 2)];
 					_domain.BulkPeekUint(range, BigEndian, vals);
 					int i = 0;
 					for (var addr = start; addr < end; addr += dataSize)
 						dict.Add(addr, vals[i++]);
+					ArrayPool<uint>.Shared.Return(vals);
 					break;
 				}
 			}
