@@ -33,6 +33,11 @@
 			return !(inputData && outputData);
 		}
 
+		private bool ViaReadByteReady()
+		{
+			return !_via1Ca1;
+		}
+
 		private bool ViaReadAtn()
 		{
 			var inputAtn = ReadMasterAtn();

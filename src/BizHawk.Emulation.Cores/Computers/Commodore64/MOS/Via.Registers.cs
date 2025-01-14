@@ -18,16 +18,12 @@
 			switch (addr)
 			{
 				case 0x0:
-					if (_pcrCb2Control != PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_NEGATIVE_EDGE && _pcrCb2Control != PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_POSITIVE_EDGE)
-						_ifr &= 0xE7;
-					if (_acrPbLatchEnable)
-						return _pbLatch;
+					if ((_pcr & 0b10100000) == 0)
+						_ifr &= 0b11100111;
 					break;
 				case 0x1:
-					if (_pcrCa2Control != PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_NEGATIVE_EDGE && _pcrCa2Control != PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_POSITIVE_EDGE)
-						_ifr &= 0xFC;
-					if (_acrPaLatchEnable)
-						return _paLatch;
+					if ((_pcr & 0b00001010) == 0)
+						_ifr &= 0b11111100;
 					break;
 				case 0x4:
 					_ifr &= 0xBF;
@@ -37,12 +33,10 @@
 					break;
 				case 0xA:
 					_ifr &= 0xFB;
-					_srCount = 8;
-					break;
-				case 0xF:
-					if (_acrPaLatchEnable)
+					if (!_srOn && (_acr & 0b00011100) != 0)
 					{
-						return _paLatch;
+						_srCount = 7;
+						_srOn = true;
 					}
 					break;
 			}
@@ -55,10 +49,10 @@
 			switch (addr)
 			{
 				case 0x0:
-					return _port.ReadPrb(_prb, _ddrb);
+					return (_prb & _ddrb) | (_irb & ~_ddrb);
 				case 0x1:
 				case 0xF:
-					return _port.ReadExternalPra();
+					return _ira;
 				case 0x2:
 					return _ddrb;
 				case 0x3:
@@ -96,17 +90,13 @@
 			switch (addr)
 			{
 				case 0x0:
-					if (_pcrCb2Control != PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_NEGATIVE_EDGE && _pcrCb2Control != PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_POSITIVE_EDGE)
-						_ifr &= 0xE7;
-					if (_pcrCb2Control == PCR_CONTROL_PULSE_OUTPUT)
-						_handshakeCb2NextClock = true;
+					if ((_pcr & 0b10100000) == 0)
+						_ifr &= 0b11100111;
 					WriteRegister(addr, val);
 					break;
 				case 0x1:
-					if (_pcrCa2Control != PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_NEGATIVE_EDGE && _pcrCa2Control != PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_POSITIVE_EDGE)
-						_ifr &= 0xFC;
-					if (_pcrCa2Control == PCR_CONTROL_PULSE_OUTPUT)
-						_handshakeCa2NextClock = true;
+					if ((_pcr & 0b00001010) == 0)
+						_ifr &= 0b11111100;
 					WriteRegister(addr, val);
 					break;
 				case 0x4:
@@ -115,11 +105,11 @@
 					break;
 				case 0x5:
 					_t1L = (_t1L & 0xFF) | ((val & 0xFF) << 8);
-					_ifr &= 0xBF;
 					_t1C = _t1L;
-					_t1CLoaded = true;
-					_t1Delayed = 1;
-					_resetPb7NextClock = _acrT1Control == ACR_T1_CONTROL_INTERRUPT_ON_LOAD_AND_PULSE_PB7;
+					_ifr &= 0xBF;
+					_t1Reload = false;
+					_t1Out = false;
+					_t1IrqAllowed = true;
 					break;
 				case 0x7:
 					_t1L = (_t1L & 0xFF) | ((val & 0xFF) << 8);
@@ -131,13 +121,8 @@
 				case 0x9:
 					_t2L = (_t2L & 0xFF) | ((val & 0xFF) << 8);
 					_ifr &= 0xDF;
-					if (_acrT2Control == ACR_T2_CONTROL_TIMED)
-					{
-						_t2C = _t2L;
-						_t2CLoaded = true;
-					}
-
-					_t2Delayed = 1;
+					if ((_acr & 0b00010000) == 0)
+						_t2Reload = true;
 					break;
 				case 0xA:
 					_ifr &= 0xFB;
@@ -200,18 +185,9 @@
 					break;
 				case 0xB:
 					_acr = val & 0xFF;
-					_acrPaLatchEnable = (val & 0x01) != 0;
-					_acrPbLatchEnable = (val & 0x02) != 0;
-					_acrSrControl = (val & 0x1C);
-					_acrT2Control = (val & 0x20);
-					_acrT1Control = (val & 0xC0);
 					break;
 				case 0xC:
 					_pcr = val & 0xFF;
-					_pcrCa1IntControl = _pcr & 0x01;
-					_pcrCa2Control = _pcr & 0x0E;
-					_pcrCb1IntControl = (_pcr & 0x10) >> 4;
-					_pcrCb2Control = (_pcr & 0xE0) >> 4;
 					break;
 				case 0xD:
 					_ifr = val & 0xFF;
@@ -224,18 +200,14 @@
 
 		public int DdrA => _ddra;
 
-		public int DdrB => _ddrb;
+		public int DdrB => _ddrb | (_acr & 0b10000000);
 
 		public int PrA => _pra;
 
-		public int PrB => _prb;
+		public int PrB => (_prb & 0x7F) | ((_acr & 0b10000000) != 0 ? _t1Out ? 0x80 : 0x00 : _prb & 0x80);
 
-		public int EffectivePrA => _pra | ~_ddra;
+		public int EffectivePrA => PrA | ~DdrA;
 
-		public int EffectivePrB => _prb | ~_ddrb;
-
-		public int ActualPrA => _acrPaLatchEnable ? _paLatch : _port.ReadPra(_pra, _ddra);
-
-		public int ActualPrB => _acrPbLatchEnable ? _pbLatch : _port.ReadPrb(_prb, _ddrb);
+		public int EffectivePrB => PrB | ~DdrB;
 	}
 }

@@ -4,32 +4,6 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 {
 	public sealed partial class Via
 	{
-		private const int PCR_INT_CONTROL_NEGATIVE_EDGE = 0x00;
-		private const int PCR_INT_CONTROL_POSITIVE_EDGE = 0x01;
-		private const int PCR_CONTROL_INPUT_NEGATIVE_ACTIVE_EDGE = 0x00;
-		private const int PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_NEGATIVE_EDGE = 0x02;
-		private const int PCR_CONTROL_INPUT_POSITIVE_ACTIVE_EDGE = 0x04;
-		private const int PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_POSITIVE_EDGE = 0x06;
-		private const int PCR_CONTROL_HANDSHAKE_OUTPUT = 0x08;
-		private const int PCR_CONTROL_PULSE_OUTPUT = 0x0A;
-		private const int PCR_CONTROL_LOW_OUTPUT = 0x0C;
-		private const int PCR_CONTROL_HIGH_OUTPUT = 0x0E;
-		private const int ACR_SR_CONTROL_DISABLED = 0x00;
-		private const int ACR_SR_CONTROL_SHIFT_IN_T2_ONCE = 0x04;
-		private const int ACR_SR_CONTROL_SHIFT_IN_PHI2 = 0x08;
-		private const int ACR_SR_CONTROL_SHIFT_IN_CLOCK = 0x0C;
-		private const int ACR_SR_CONTROL_SHIFT_OUT_T2 = 0x10;
-		private const int ACR_SR_CONTROL_SHIFT_OUT_T2_ONCE = 0x14;
-		private const int ACR_SR_CONTROL_SHIFT_OUT_PHI2 = 0x18;
-		private const int ACR_SR_CONTROL_SHIFT_OUT_CLOCK = 0x1C;
-		private const int ACR_T2_CONTROL_TIMED = 0x00;
-		private const int ACR_T2_CONTROL_COUNT_ON_PB6 = 0x20;
-		private const int ACR_T1_CONTROL_INTERRUPT_ON_LOAD = 0x00;
-		private const int ACR_T1_CONTROL_CONTINUOUS_INTERRUPTS = 0x40;
-		private const int ACR_T1_CONTROL_INTERRUPT_ON_LOAD_AND_ONESHOT_PB7 = 0x80;
-		private const int ACR_T1_CONTROL_CONTINUOUS_INTERRUPTS_AND_OUTPUT_ON_PB7 = 0xC0;
-		private const int ACR_T1_CONTROL_INTERRUPT_ON_LOAD_AND_PULSE_PB7 = 0x80;
-
 		private int _pra;
 		private int _ddra;
 		private int _prb;
@@ -38,6 +12,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		private int _t1L;
 		private int _t2C;
 		private int _t2L;
+		private bool _t1Out;
 		private int _sr;
 		private int _acr;
 		private int _pcr;
@@ -45,46 +20,45 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		private int _ier;
 		private readonly IPort _port;
 
-		private int _paLatch;
-		private int _pbLatch;
-
-		private int _pcrCa1IntControl;
-		private int _pcrCa2Control;
-		private int _pcrCb1IntControl;
-		private int _pcrCb2Control;
-		private bool _acrPaLatchEnable;
-		private bool _acrPbLatchEnable;
-		private int _acrSrControl;
-		private int _acrT1Control;
-		private int _acrT2Control;
+		private int _ira;
+		private int _irb;
 		private int _srCount;
 
-		private bool _ca1L;
-		private bool _ca2L;
-		private bool _cb1L;
-		private bool _cb2L;
-		private bool _pb6L;
+		private bool _ca2Handshake;
+		private bool _cb2Handshake;
+		private bool _ca2Pulse;
+		private bool _cb2Pulse;
 
-		private bool _resetCa2NextClock;
-		private bool _resetCb2NextClock;
-		private bool _resetPb7NextClock;
-		private bool _setPb7NextClock;
+		public bool Ca2 => _ca2Out;
+		public bool Cb1 => _cb1Out;
+		public bool Cb2 => _cb2Out;
 
-		private bool _handshakeCa2NextClock;
-		private bool _handshakeCb2NextClock;
-
-		public bool Ca1;
-		public bool Ca2;
-		public bool Cb1;
-		public bool Cb2;
-		private bool _pb6;
+		private bool _ca2Out;
+		private bool _cb1Out;
+		private bool _cb2Out;
+		private bool _srOn;
+		private bool _srDir;
+		private int _srBuffer;
 
 		private int _interruptNextClock;
-		private bool _t1CLoaded;
-		private bool _t2CLoaded;
 		private int _t1Delayed;
 		private int _t2Delayed;
+		private bool _t1Reload;
+		private bool _t1IrqAllowed;
+		private bool _t2Reload;
+		private bool _t2OneShot;
+		private int _ca1Buffer;
+		private int _ca2Buffer;
+		private int _cb1Buffer;
+		private int _cb2Buffer;
+		private bool _pb6;
+		private bool _pb6L;
 
+		public Func<bool> ReadCa1 = () => true;
+		public Func<bool> ReadCa2 = () => true;
+		public Func<bool> ReadCb1 = () => true;
+		public Func<bool> ReadCb2 = () => true;
+		
 		public Via()
 		{
 			_port = new DisconnectedPort();
@@ -98,10 +72,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		public Via(Func<bool> readClock, Func<bool> readData, Func<bool> readAtn, int driveNumber)
 		{
 			_port = new IecPort(readClock, readData, readAtn, driveNumber);
-			_ca1L = true;
 		}
 
-		public bool Irq => (_ifr & 0x80) == 0;
+		public bool Irq => (_ifr & 0x80) != 0;
 
 		public void HardReset()
 		{
@@ -118,279 +91,212 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_pcr = 0;
 			_ifr = 0;
 			_ier = 0;
-			_paLatch = 0;
-			_pbLatch = 0;
-			_pcrCa1IntControl = 0;
-			_pcrCa2Control = 0;
-			_pcrCb1IntControl = 0;
-			_pcrCb2Control = 0;
-			_acrPaLatchEnable = false;
-			_acrPbLatchEnable = false;
-			_acrSrControl = 0;
-			_acrT1Control = 0;
-			_acrT2Control = 0;
-			_ca1L = true;
-			_cb1L = true;
-			Ca1 = true;
-			Ca2 = true;
-			Cb1 = true;
-			Cb2 = true;
+			_ira = 0;
+			_irb = 0;
+			_ca2Out = true;
+			_cb1Out = true;
+			_cb2Out = true;
 			_srCount = 0;
-
-			_pb6L = true;
-			_pb6 = true;
-			_resetCa2NextClock = false;
-			_resetCb2NextClock = false;
-			_handshakeCa2NextClock = false;
-			_handshakeCb2NextClock = false;
 			_interruptNextClock = 0;
-			_t1CLoaded = false;
-			_t2CLoaded = false;
-			_resetPb7NextClock = false;
-			_setPb7NextClock = false;
+			_t1Out = false;
+			_ca2Handshake = false;
+			_cb2Handshake = false;
+			_ca2Pulse = false;
+			_cb2Pulse = false;
+			_t1IrqAllowed = false;
 		}
 
+		private bool Ca1Edge
+		{
+			get
+			{
+				var result = ((_ca1Buffer & 0b01) != 0) ^ ((_ca1Buffer & 0b10) != 0) &&
+					((_ca1Buffer & 0b10) != 0) ^ ((_pcr & 0b00000001) != 0);
+				return result;
+			}
+		}
+
+		private bool Ca2Edge
+		{
+			get
+			{
+				var result = ((_ca2Buffer & 0b01) != 0) ^ ((_ca2Buffer & 0b10) != 0) &&
+					((_ca2Buffer & 0b10) != 0) ^ ((_pcr & 0b00000010) != 0);
+				return result;
+			}
+		}
+
+		private bool Cb1Edge
+		{
+			get
+			{
+				var result = ((_cb1Buffer & 0b01) != 0) ^ ((_cb1Buffer & 0b10) != 0) &&
+					((_cb1Buffer & 0b10) != 0) ^ ((_pcr & 0b00010000) != 0);
+				return result;
+			}
+		}
+
+		private bool Cb2Edge
+		{
+			get
+			{
+				var result = ((_cb2Buffer & 0b01) != 0) ^ ((_cb2Buffer & 0b10) != 0) &&
+					((_cb2Buffer & 0b10) != 0) ^ ((_pcr & 0b00100000) != 0);
+				return result;
+			}
+		}
+
+		private bool SrClockEdge => (_srBuffer & 0b01) != 0 && 
+			(_srBuffer & 0b10) == 0;
+		
 		public void ExecutePhase()
 		{
-			var shiftIn = false;
+			// Port input latches
+			if ((_acr & 0b00000001) == 0 || (_ca2Handshake && (_interruptNextClock & 0x02) != 0))
+				_ira = _port.ReadExternalPra();
+			if ((_acr & 0b00000010) == 0 || (_cb2Handshake && (_interruptNextClock & 0x10) != 0))
+				_irb = _port.ReadPrb(_prb, _ddrb);
+			
+			// Edge detection on CA1, CA2, CB1, CB2
+			_ca1Buffer = (_ca1Buffer << 1) | (ReadCa1() ? 1 : 0);
+			_ca2Buffer = (_ca2Buffer << 1) | (ReadCa2() ? 1 : 0);
+			_cb1Buffer = (_cb1Buffer << 1) | (ReadCb1() ? 1 : 0);
+			_cb2Buffer = (_cb2Buffer << 1) | (ReadCb2() ? 1 : 0);
 
-			// TODO: use this or delete
-			////var shiftOut = false;
-
-			// Process delayed interrupts
+			// Interrupt generation
 			_ifr |= _interruptNextClock;
-			_interruptNextClock = 0;
 
-			// Process 'pulse' and 'handshake' outputs on PB7, CA2 and CB2
-			if (_resetCa2NextClock)
+			if ((_ier & _ifr & 0x7F) != 0)
+				_ifr |= 0x80;
+
+			// Pulse and handshake on CA2
+			_ca2Out = (_pcr & 0b00000110) switch
 			{
-				Ca2 = true;
-				_resetCa2NextClock = false;
+				0b00000000 => _ca2Handshake,
+				0b00000010 => _ca2Pulse,
+				0b00000100 => false,
+				_ => true
+			};
+
+			// Pulse and handshake on CB2
+			_cb2Out = (_pcr & 0b01100000) switch
+			{
+				0b00000000 => _cb2Handshake,
+				0b00100000 => _cb2Pulse,
+				0b01000000 => false,
+				_ => true
+			};
+
+			// PB6 edge detection
+			_pb6L = _pb6;
+			_pb6 = (_port.ReadExternalPrb() & 0x40) != 0;
+			
+			// Timer 1
+			if (_t1Reload)
+			{
+				if (_t1IrqAllowed)
+					_interruptNextClock |= 0x40;
+				_t1C = _t1L & 0xFFFF;
+				_t1IrqAllowed &= (_acr & 0b01000000) != 0;
+				_t1Reload = false;
+				_t1Out = !_t1Out;
 			}
-			else if (_handshakeCa2NextClock)
+			else
 			{
-				Ca2 = false;
-				_resetCa2NextClock = _pcrCa2Control == PCR_CONTROL_PULSE_OUTPUT;
-				_handshakeCa2NextClock = false;
+				if (_t1C == 0)
+					_t1Reload = true;
+				_t1C = (_t1C - 1) & 0xFFFF;
 			}
 
-			if (_resetCb2NextClock)
+			// Timer 2
+			var srT2 = false;
+			if ((_acr & 0b00100000) == 0 || (!_pb6 && _pb6L))
 			{
-				Cb2 = true;
-				_resetCb2NextClock = false;
-			}
-			else if (_handshakeCb2NextClock)
-			{
-				Cb2 = false;
-				_resetCb2NextClock = _pcrCb2Control == PCR_CONTROL_PULSE_OUTPUT;
-				_handshakeCb2NextClock = false;
+				if (_t2C == 0)
+				{
+					if (_t2OneShot)
+					{
+						_t2OneShot = false;
+						_interruptNextClock |= 0x20;
+					}
+
+				}
+
+				if ((_t2C & 0xFF) == 0 && (_acr & 0b00010100) != 0)
+				{
+					srT2 = true;
+					_t2C = ((_t2C - 1) & ~0xFF) | (_t2L & 0xFF);
+				}
+				else
+				{
+					_t2C = (_t2C - 1) & 0xFFFF;
+				}
 			}
 			
-			if (_resetPb7NextClock)
-			{
-				_prb &= 0x7F;
-				_resetPb7NextClock = false;
-			}
-			else if (_setPb7NextClock)
-			{
-				_prb |= 0x80;
-				_setPb7NextClock = false;
-			}			
+			// Process CA1/CA2/CB1/CB2 input interrupts
+			if (Ca1Edge)
+				_interruptNextClock |= 0x02;
+			
+			if (Ca2Edge)
+				_interruptNextClock |= 0x01;
+			
+			if (Cb1Edge)
+				_interruptNextClock |= 0x10;
 
-			// Count timers
-			if (_t1Delayed > 0)
-			{
-				_t1Delayed--;
-			}
-			else
-			{
-				_t1C--;
-				if (_t1C == 0)
-				{
-					switch (_acrT1Control)
-					{
-						case ACR_T1_CONTROL_CONTINUOUS_INTERRUPTS_AND_OUTPUT_ON_PB7:
-							_prb ^= 0x80;
-							break;
-						case ACR_T1_CONTROL_INTERRUPT_ON_LOAD_AND_PULSE_PB7:
-							_prb |= 0x80;
-							break;
-					}
-				}
-				else if (_t1C < 0)
-				{
-					if (_t1CLoaded)
-					{
-						_interruptNextClock |= 0x40;
-						_t1CLoaded = false;
-					}
+			if (Cb2Edge)
+				_interruptNextClock |= 0x08;
 
-					switch (_acrT1Control)
-					{
-						case ACR_T1_CONTROL_CONTINUOUS_INTERRUPTS:
-						case ACR_T1_CONTROL_CONTINUOUS_INTERRUPTS_AND_OUTPUT_ON_PB7:
-							_t1C = _t1L;
-							_t1CLoaded = true;
-							break;
-					}
+			var clk = false;
+			bool pulse;
 
-					_t1C &= 0xFFFF;
-				}
-			}
-
-			if (_t2Delayed > 0)
+			if (!_srOn)
 			{
-				_t2Delayed--;
+				pulse = (_acr & 0b00011100) == 0 &&
+					(_srBuffer & 0b01) != 0 &&
+					(_srBuffer & 0b10) == 0;
+				clk = (_acr & 0b00011100) != 0 ||
+					(_cb1Buffer & 0b01) != 0;
 			}
 			else
 			{
-				switch (_acrT2Control)
+				pulse = (_acr & 0b00001100) switch
 				{
-					case ACR_T2_CONTROL_TIMED:
-						_t2C--;
-						if (_t2C < 0)
-						{
-							if (_t2CLoaded)
-							{
-								_interruptNextClock |= 0x20;
-								_t2CLoaded = false;
-							}
-							_t2C = _t2L;
-						}
-						break;
-					case ACR_T2_CONTROL_COUNT_ON_PB6:
-						_pb6L = _pb6;
-						_pb6 = (_port.ReadExternalPrb() & 0x40) != 0;
-						if (!_pb6 && _pb6L)
-						{
-							_t2C--;
-							if (_t2C == 0)
-								_ifr |= 0x20;
-							_t2C &= 0xFFFF;
-						}
-						break;
+					0b00001000 => true,
+					0b00000100 or 0b00000000 => srT2, 
+					_ => (_srBuffer & 0b01) != 0 && (_srBuffer & 0b10) == 0
+				};
+
+				if ((_acr & 0b00001100) == 0b00001100)
+					clk = (_cb1Buffer & 0b01) != 0;
+				else
+					clk ^= pulse;
+			}
+
+			if (_srDir && (_srBuffer & 0b01) != 0 && (_srBuffer & 0b10) == 0)
+			{
+				_sr = ((_sr << 1) & 0xFF) | ((_sr & 0x80) >> 7);
+			}
+			else if (!_srDir && (_srBuffer & 0b01) == 0 && (_srBuffer & 0b10) != 0)
+			{
+				_sr = ((_sr << 1) & 0xFF) | (_cb2Buffer & 0b01);
+			}
+			
+			_srBuffer = (_srBuffer << 1) | (clk ? 1 : 0);
+
+			if (_srOn || (_acr & 0b00011100) == 0b00000000)
+			{
+				if ((_acr & 0b00001100) == 0)
+				{
+					_srOn = _srDir;
+				}
+				else if (clk && pulse)
+				{
+					if (_srCount == 0)
+						_srOn = false;
+					else
+						_srCount--;
 				}
 			}
-
-			// Process CA2
-			switch (_pcrCa2Control)
-			{
-				case PCR_CONTROL_INPUT_NEGATIVE_ACTIVE_EDGE:
-				case PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_NEGATIVE_EDGE:
-					if (_ca2L && !Ca2)
-						_ifr |= 0x01;
-					break;
-				case PCR_CONTROL_INPUT_POSITIVE_ACTIVE_EDGE:
-				case PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_POSITIVE_EDGE:
-					if (!_ca2L && Ca2)
-						_ifr |= 0x01;
-					break;
-				case PCR_CONTROL_HANDSHAKE_OUTPUT:
-					if (_ca1L && !Ca1)
-					{
-						Ca2 = true;
-						_ifr |= 0x01;
-					}
-					break;
-				case PCR_CONTROL_PULSE_OUTPUT:
-					break;
-				case PCR_CONTROL_LOW_OUTPUT:
-					Ca2 = false;
-					break;
-				case PCR_CONTROL_HIGH_OUTPUT:
-					Ca2 = true;
-					break;
-			}
-
-			// Process CB2
-			switch (_pcrCb2Control)
-			{
-				case PCR_CONTROL_INPUT_NEGATIVE_ACTIVE_EDGE:
-				case PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_NEGATIVE_EDGE:
-					if (_cb2L && !Cb2)
-						_ifr |= 0x08;
-					break;
-				case PCR_CONTROL_INPUT_POSITIVE_ACTIVE_EDGE:
-				case PCR_CONTROL_INDEPENDENT_INTERRUPT_INPUT_POSITIVE_EDGE:
-					if (!_cb2L && Cb2)
-						_ifr |= 0x08;
-					break;
-				case PCR_CONTROL_HANDSHAKE_OUTPUT:
-					if (_cb1L && !Cb1)
-					{
-						Cb2 = true;
-						_ifr |= 0x08;
-					}
-					break;
-				case PCR_CONTROL_PULSE_OUTPUT:
-					break;
-				case PCR_CONTROL_LOW_OUTPUT:
-					Cb2 = false;
-					break;
-				case PCR_CONTROL_HIGH_OUTPUT:
-					Cb2 = true;
-					break;
-			}
-
-			// interrupt generation
-
-			if (_acrSrControl == ACR_SR_CONTROL_DISABLED)
-			{
-				_ifr &= 0xFB;
-				_srCount = 0;
-			}
-
-			/*
-				As long as the CA1 interrupt flag is set, the data on the peripheral pins can change
-				without affecting the data in the latches. This input latching can be used with any of the CA2
-				input or output modes.
-				It is important to note that on the PA port, the processor always reads the data on the
-				peripheral pins (as reflected in the latches). For output pins, the processor still reads the
-				latches. This may or may not reflect the data currently in the ORA. Proper system operation
-				requires careful planning on the part of the system designer if input latching is combined
-				with output pins on the peripheral ports.
-			*/
-
-			if ((_pcrCa1IntControl is PCR_INT_CONTROL_POSITIVE_EDGE && Ca1 && !_ca1L)
-				|| (_pcrCa1IntControl is PCR_INT_CONTROL_NEGATIVE_EDGE && !Ca1 && _ca1L))
-			{
-				if (_acrPaLatchEnable && (_ifr & 0x02) == 0)
-					_paLatch = _port.ReadExternalPra();
-				_ifr |= 0x02;
-			}
-
-			/*
-                Input latching on the PB port is controlled in the same manner as that described for the PA port.
-                However, with the peripheral B port the input latch will store either the voltage on the pin or the contents
-                of the Output Register (ORB) depending on whether the pin is programmed to act as an input or an
-                output. As with the PA port, the processor always reads the input latches.
-            */
-
-			if ((_pcrCb1IntControl is PCR_INT_CONTROL_POSITIVE_EDGE && Cb1 && !_cb1L)
-				|| (_pcrCb1IntControl is PCR_INT_CONTROL_NEGATIVE_EDGE && !Cb1 && _cb1L))
-			{
-				if (_acrPbLatchEnable && (_ifr & 0x10) == 0)
-					_pbLatch = _port.ReadPrb(_prb, _ddrb);
-				if (_acrSrControl == ACR_SR_CONTROL_DISABLED)
-					shiftIn = true;
-				_ifr |= 0x10;
-			}
-
-			if (shiftIn)
-			{
-				_sr <<= 1;
-				_sr |= Cb2 ? 1 : 0;
-			}
-
-			if ((_ifr & _ier & 0x7F) != 0)
-				_ifr |= 0x80;
-			else
-				_ifr &= 0x7F;
-
-			_ca1L = Ca1;
-			_ca2L = Ca2;
-			_cb1L = Cb1;
-			_cb2L = Cb2;
 		}
 
 		public void SyncState(Serializer ser)
@@ -413,39 +319,29 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_port.SyncState(ser);
 			ser.EndSection();
 
-			ser.Sync("PortLatchA", ref _paLatch);
-			ser.Sync("PortLatchB", ref _pbLatch);
-			ser.Sync("CA1InterruptControl", ref _pcrCa1IntControl);
-			ser.Sync("CA2Control", ref _pcrCa2Control);
-			ser.Sync("CB1InterruptControl", ref _pcrCb1IntControl);
-			ser.Sync("CB2Control", ref _pcrCb2Control);
-			ser.Sync("PortLatchEnableA", ref _acrPaLatchEnable);
-			ser.Sync("PortLatchEnableB", ref _acrPbLatchEnable);
-			ser.Sync("ShiftRegisterControl", ref _acrSrControl);
-			ser.Sync("Timer1Control", ref _acrT1Control);
-			ser.Sync("Timer2Control", ref _acrT2Control);
-			ser.Sync("PreviousCA1", ref _ca1L);
-			ser.Sync("PreviousCA2", ref _ca2L);
-			ser.Sync("PreviousCB1", ref _cb1L);
-			ser.Sync("PreviousCB2", ref _cb2L);
+			ser.Sync("PortLatchA", ref _ira);
+			ser.Sync("PortLatchB", ref _irb);
+			ser.Sync("PreviousCA1", ref _ca1Buffer);
+			ser.Sync("PreviousCA2", ref _ca2Buffer);
+			ser.Sync("PreviousCB1", ref _cb1Buffer);
+			ser.Sync("PreviousCB2", ref _cb2Buffer);
 			ser.Sync("PreviousPB6", ref _pb6L);
-			ser.Sync("ResetCa2NextClock", ref _resetCa2NextClock);
-			ser.Sync("ResetCb2NextClock", ref _resetCb2NextClock);
-			ser.Sync("HandshakeCa2NextClock", ref _handshakeCa2NextClock);
-			ser.Sync("HandshakeCb2NextClock", ref _handshakeCb2NextClock);
-			ser.Sync("CA1", ref Ca1);
-			ser.Sync("CA2", ref Ca2);
-			ser.Sync("CB1", ref Cb1);
-			ser.Sync("CB2", ref Cb2);
+			ser.Sync("Ca2Handshake", ref _ca2Handshake);
+			ser.Sync("Cb2Handshake", ref _cb2Handshake);
+			ser.Sync("Ca2Pulse", ref _ca2Pulse);
+			ser.Sync("Cb2Pulse", ref _cb2Pulse);
+			ser.Sync("CA2", ref _ca2Out);
+			ser.Sync("CB1", ref _cb1Out);
+			ser.Sync("CB2", ref _cb2Out);
 			ser.Sync("PB6", ref _pb6);
 			ser.Sync("InterruptNextClock", ref _interruptNextClock);
-			ser.Sync("T1Loaded", ref _t1CLoaded);
-			ser.Sync("T2Loaded", ref _t2CLoaded);
 			ser.Sync("T1Delayed", ref _t1Delayed);
 			ser.Sync("T2Delayed", ref _t2Delayed);
-			ser.Sync("ResetPb7NextClock", ref _resetPb7NextClock);
-			ser.Sync("SetPb7NextClock", ref _setPb7NextClock);
 			ser.Sync("ShiftRegisterCount", ref _srCount);
+			ser.Sync("T1IRQAllowed", ref _t1IrqAllowed);
+			ser.Sync("T1Output", ref _t1Out);
+			ser.Sync("ShiftRegOn", ref _srOn);
+			ser.Sync("ShiftRegDir", ref _srDir);
 		}
 	}
 }
