@@ -28,6 +28,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 		public Func<int> ReadIec = () => 0xFF;
 		public Action DebuggerStep;
 		public readonly Chip23128 DriveRom;
+		private bool _via1Ca1;
 
 		private struct CpuLink : IMOS6502XLink
 		{
@@ -59,7 +60,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 			_ram = new int[0x800];
 			Via0 = Chip6522.Create(ViaReadClock, ViaReadData, ViaReadAtn, 8);
+			Via0.ReadCa1 = ViaReadAtn;
 			Via1 = Chip6522.Create(ReadVia1PrA, ReadVia1PrB);
+			Via1.ReadCa1 = ViaReadByteReady;
 
 			_cpuClockNum = clockNum;
 			_driveCpuClockNum = clockDen * 16000000; // 16mhz
@@ -119,6 +122,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			ser.Sync("DiskWriteLatch", ref _diskWriteLatch);
 			ser.Sync("DiskOutputBits", ref _diskOutputBits);
 			ser.Sync("DiskWriteProtected", ref _diskWriteProtected);
+			ser.Sync("Via1Ca1", ref _via1Ca1);
 
 			if (ser.IsReader)
 			{
@@ -165,7 +169,6 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 		private void ExecuteSystem()
 		{
-			Via0.Ca1 = ViaReadAtn();
 			Via0.ExecutePhase();
 			Via1.ExecutePhase();
 
@@ -177,7 +180,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 			_overflowFlagDelaySr >>= 1;
 
-			_cpu.IRQ = !(Via0.Irq && Via1.Irq); // active low IRQ line
+			_cpu.IRQ = Via0.Irq || Via1.Irq;
 			_cpu.ExecuteOne();
 
 			if (_ledEnabled)

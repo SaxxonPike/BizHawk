@@ -178,9 +178,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 					}
 
 					// negative transition activates SO pin on CPU
-					_previousCa1 = Via1.Ca1;
-					Via1.Ca1 = !_byteReady;
-					if (_previousCa1 && !Via1.Ca1)
+					_previousCa1 = _via1Ca1;
+					_via1Ca1 = !_byteReady;
+					if (_previousCa1 && !_via1Ca1)
 					{
 						// cycle 6 is roughly 400ns
 						_overflowFlagDelaySr |= _diskCycle > 6 ? 4 : 2;
