@@ -18,21 +18,25 @@
 			switch (addr)
 			{
 				case 0x0:
-					if ((_pcr & 0b10100000) == 0)
-						_ifr &= 0b11100111;
+					_ifr &= 0b11101111;
+					if ((_pcr & 0b00100000) == 0)
+						_ifr &= 0b11110111;
+					_cb2Handshake = true;
 					break;
 				case 0x1:
-					if ((_pcr & 0b00001010) == 0)
-						_ifr &= 0b11111100;
+					_ifr &= 0b11111101;
+					if ((_pcr & 0b00000010) == 0)
+						_ifr &= 0b11111110;
+					_ca2Handshake = true;
 					break;
 				case 0x4:
-					_ifr &= 0xBF;
+					_ifr &= 0b10111111;
 					break;
 				case 0x8:
-					_ifr &= 0xDF;
+					_ifr &= 0b11011111;
 					break;
 				case 0xA:
-					_ifr &= 0xFB;
+					_ifr &= 0b11111011;
 					if (!_srOn && (_acr & 0b00011100) != 0)
 					{
 						_srCount = 7;
@@ -49,7 +53,7 @@
 			switch (addr)
 			{
 				case 0x0:
-					return (_prb & _ddrb) | (_irb & ~_ddrb);
+					return (PrB & DdrB) | (_irb & ~DdrB);
 				case 0x1:
 				case 0xF:
 					return _ira;
@@ -76,9 +80,9 @@
 				case 0xC:
 					return _pcr;
 				case 0xD:
-					return _ifr;
+					return (_ifr & 0x7F) | (_irq ? 0x80 : 0x00);
 				case 0xE:
-					return _ier | 0x80;
+					return _ier;
 			}
 
 			return 0xFF;
@@ -90,13 +94,15 @@
 			switch (addr)
 			{
 				case 0x0:
-					if ((_pcr & 0b10100000) == 0)
-						_ifr &= 0b11100111;
+					_ifr &= 0b11101111;
+					if ((_pcr & 0b00100000) == 0)
+						_ifr &= 0b11110111;
 					WriteRegister(addr, val);
 					break;
 				case 0x1:
-					if ((_pcr & 0b00001010) == 0)
-						_ifr &= 0b11111100;
+					_ifr &= 0b11111101;
+					if ((_pcr & 0b00000010) == 0)
+						_ifr &= 0b11111110;
 					WriteRegister(addr, val);
 					break;
 				case 0x4:
@@ -106,37 +112,36 @@
 				case 0x5:
 					_t1L = (_t1L & 0xFF) | ((val & 0xFF) << 8);
 					_t1C = _t1L;
-					_ifr &= 0xBF;
+					_ifr &= 0b10111111;
 					_t1Reload = false;
 					_t1Out = false;
 					_t1IrqAllowed = true;
 					break;
 				case 0x7:
 					_t1L = (_t1L & 0xFF) | ((val & 0xFF) << 8);
-					_ifr &= 0xBF;
+					_ifr &= 0b10111111;
 					break;
 				case 0x8:
 					_t2L = (_t2L & 0xFF00) | (val & 0xFF);
 					break;
 				case 0x9:
 					_t2L = (_t2L & 0xFF) | ((val & 0xFF) << 8);
-					_ifr &= 0xDF;
-					if ((_acr & 0b00010000) == 0)
-						_t2Reload = true;
+					_ifr &= 0b11011111;
+					_t2OneShot = true;
 					break;
 				case 0xA:
-					_ifr &= 0xFB;
+					_ifr &= 0b11111011;
 					_srCount = 8;
 					WriteRegister(addr, val);
 					break;
 				case 0xD:
-					_ifr &= ~val;
+					_ifr &= ~(val & 0x7F);
 					break;
 				case 0xE:
 					if ((val & 0x80) != 0)
 						_ier |= val & 0x7F;
 					else
-						_ier &= ~val;
+						_ier &= ~(val & 0x7F);
 					break;
 				default:
 					WriteRegister(addr, val);
@@ -150,11 +155,11 @@
 			switch (addr)
 			{
 				case 0x0:
-					_prb = val & 0xFF;
+					_orb = val & 0xFF;
 					break;
 				case 0x1:
 				case 0xF:
-					_pra = val & 0xFF;
+					_ora = val & 0xFF;
 					break;
 				case 0x2:
 					_ddrb = val & 0xFF;
@@ -190,7 +195,7 @@
 					_pcr = val & 0xFF;
 					break;
 				case 0xD:
-					_ifr = val & 0xFF;
+					_ifr = val & 0x7F;
 					break;
 				case 0xE:
 					_ier = val & 0xFF;
@@ -202,12 +207,10 @@
 
 		public int DdrB => _ddrb | (_acr & 0b10000000);
 
-		public int PrA => _pra;
+		public int PrA => _ora;
 
-		public int PrB => (_prb & 0x7F) | ((_acr & 0b10000000) != 0 ? _t1Out ? 0x80 : 0x00 : _prb & 0x80);
-
-		public int EffectivePrA => PrA | ~DdrA;
-
-		public int EffectivePrB => PrB | ~DdrB;
+		public int PrB => (_acr & 0b10000000) != 0
+			? (_orb & 0x7F) | (_t1Out ? 0x80 : 0x00)
+			: _orb;
 	}
 }

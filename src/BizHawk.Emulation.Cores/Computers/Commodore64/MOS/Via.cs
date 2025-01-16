@@ -4,9 +4,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 {
 	public sealed partial class Via
 	{
-		private int _pra;
+		private int _ora;
 		private int _ddra;
-		private int _prb;
+		private int _orb;
 		private int _ddrb;
 		private int _t1C;
 		private int _t1L;
@@ -18,6 +18,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		private int _pcr;
 		private int _ifr;
 		private int _ier;
+		private bool _irq;
 		private readonly IPort _port;
 
 		private int _ira;
@@ -41,11 +42,8 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 		private int _srBuffer;
 
 		private int _interruptNextClock;
-		private int _t1Delayed;
-		private int _t2Delayed;
 		private bool _t1Reload;
 		private bool _t1IrqAllowed;
-		private bool _t2Reload;
 		private bool _t2OneShot;
 		private int _ca1Buffer;
 		private int _ca2Buffer;
@@ -74,12 +72,12 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_port = new IecPort(readClock, readData, readAtn, driveNumber);
 		}
 
-		public bool Irq => (_ifr & 0x80) != 0;
+		public bool Irq => _irq;
 
 		public void HardReset()
 		{
-			_pra = 0;
-			_prb = 0;
+			_ora = 0;
+			_orb = 0;
 			_ddra = 0;
 			_ddrb = 0;
 			_t1C = 0xFFFF;
@@ -90,6 +88,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_acr = 0;
 			_pcr = 0;
 			_ifr = 0;
+			_irq = false;
 			_ier = 0;
 			_ira = 0;
 			_irb = 0;
@@ -99,63 +98,38 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_srCount = 0;
 			_interruptNextClock = 0;
 			_t1Out = false;
-			_ca2Handshake = false;
-			_cb2Handshake = false;
-			_ca2Pulse = false;
-			_cb2Pulse = false;
+			_ca2Handshake = true;
+			_cb2Handshake = true;
+			_ca2Pulse = true;
+			_cb2Pulse = true;
 			_t1IrqAllowed = false;
+			_srBuffer = ~0;
+			_ca1Buffer = ~0;
+			_ca2Buffer = ~0;
+			_cb1Buffer = ~0;
+			_cb2Buffer = ~0;
+			_pb6 = false;
+			_pb6L = false;
+			_t1Reload = false;
+			_t2OneShot = false;
+			_irq = false;
 		}
 
-		private bool Ca1Edge
-		{
-			get
-			{
-				var result = ((_ca1Buffer & 0b01) != 0) ^ ((_ca1Buffer & 0b10) != 0) &&
-					((_ca1Buffer & 0b10) != 0) ^ ((_pcr & 0b00000001) != 0);
-				return result;
-			}
-		}
-
-		private bool Ca2Edge
-		{
-			get
-			{
-				var result = ((_ca2Buffer & 0b01) != 0) ^ ((_ca2Buffer & 0b10) != 0) &&
-					((_ca2Buffer & 0b10) != 0) ^ ((_pcr & 0b00000010) != 0);
-				return result;
-			}
-		}
-
-		private bool Cb1Edge
-		{
-			get
-			{
-				var result = ((_cb1Buffer & 0b01) != 0) ^ ((_cb1Buffer & 0b10) != 0) &&
-					((_cb1Buffer & 0b10) != 0) ^ ((_pcr & 0b00010000) != 0);
-				return result;
-			}
-		}
-
-		private bool Cb2Edge
-		{
-			get
-			{
-				var result = ((_cb2Buffer & 0b01) != 0) ^ ((_cb2Buffer & 0b10) != 0) &&
-					((_cb2Buffer & 0b10) != 0) ^ ((_pcr & 0b00100000) != 0);
-				return result;
-			}
-		}
-
-		private bool SrClockEdge => (_srBuffer & 0b01) != 0 && 
-			(_srBuffer & 0b10) == 0;
-		
 		public void ExecutePhase()
 		{
+			var pbIn = _port.ReadExternalPrb();
+
+			// Interrupt generation
+			var interrupts = _interruptNextClock;
+			_ifr |= _interruptNextClock & 0x7F;
+			_irq = (_ier & _ifr & 0x7F) != 0;
+			_interruptNextClock = 0;
+
 			// Port input latches
-			if ((_acr & 0b00000001) == 0 || (_ca2Handshake && (_interruptNextClock & 0x02) != 0))
-				_ira = _port.ReadExternalPra();
-			if ((_acr & 0b00000010) == 0 || (_cb2Handshake && (_interruptNextClock & 0x10) != 0))
-				_irb = _port.ReadPrb(_prb, _ddrb);
+			if ((_acr & 0b00000001) == 0 || (_ca2Handshake && (interrupts & 0b00000010) != 0))
+				_ira = _port.ReadExternalPra(); //_port.ReadPra(0x00, 0x00);
+			if ((_acr & 0b00000010) == 0 || (_cb2Handshake && (interrupts & 0b00010000) != 0))
+				_irb = pbIn; //_port.ReadPrb(PrB, DdrB);
 			
 			// Edge detection on CA1, CA2, CB1, CB2
 			_ca1Buffer = (_ca1Buffer << 1) | (ReadCa1() ? 1 : 0);
@@ -163,13 +137,12 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			_cb1Buffer = (_cb1Buffer << 1) | (ReadCb1() ? 1 : 0);
 			_cb2Buffer = (_cb2Buffer << 1) | (ReadCb2() ? 1 : 0);
 
-			// Interrupt generation
-			_ifr |= _interruptNextClock;
-
-			if ((_ier & _ifr & 0x7F) != 0)
-				_ifr |= 0x80;
-
 			// Pulse and handshake on CA2
+			if ((interrupts & 0b00000010) != 0)
+			{
+				_ca2Handshake = false;
+			}
+			
 			_ca2Out = (_pcr & 0b00000110) switch
 			{
 				0b00000000 => _ca2Handshake,
@@ -179,6 +152,11 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			};
 
 			// Pulse and handshake on CB2
+			if ((interrupts & 0b00010000) != 0)
+			{
+				_cb2Handshake = false;
+			}
+			
 			_cb2Out = (_pcr & 0b01100000) switch
 			{
 				0b00000000 => _cb2Handshake,
@@ -189,13 +167,13 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 
 			// PB6 edge detection
 			_pb6L = _pb6;
-			_pb6 = (_port.ReadExternalPrb() & 0x40) != 0;
+			_pb6 = (pbIn & 0x40) != 0;
 			
 			// Timer 1
 			if (_t1Reload)
 			{
 				if (_t1IrqAllowed)
-					_interruptNextClock |= 0x40;
+					_interruptNextClock |= 0b01000000;
 				_t1C = _t1L & 0xFFFF;
 				_t1IrqAllowed &= (_acr & 0b01000000) != 0;
 				_t1Reload = false;
@@ -217,7 +195,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 					if (_t2OneShot)
 					{
 						_t2OneShot = false;
-						_interruptNextClock |= 0x20;
+						_interruptNextClock |= 0b00100000;
 					}
 
 				}
@@ -234,17 +212,29 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			}
 			
 			// Process CA1/CA2/CB1/CB2 input interrupts
-			if (Ca1Edge)
-				_interruptNextClock |= 0x02;
-			
-			if (Ca2Edge)
-				_interruptNextClock |= 0x01;
-			
-			if (Cb1Edge)
-				_interruptNextClock |= 0x10;
+			if (((_ca1Buffer & 0b01) != 0) ^ ((_ca1Buffer & 0b10) != 0) &&
+				((_ca1Buffer & 0b10) != 0) ^ ((_pcr & 0b00000001) != 0))
+			{
+				_interruptNextClock |= 0b00000010;
+			}
 
-			if (Cb2Edge)
-				_interruptNextClock |= 0x08;
+			if (((_ca2Buffer & 0b01) != 0) ^ ((_ca2Buffer & 0b10) != 0) &&
+				((_ca2Buffer & 0b10) != 0) ^ ((_pcr & 0b00000010) != 0))
+			{
+				_interruptNextClock |= 0b00000001;
+			}
+
+			if (((_cb1Buffer & 0b01) != 0) ^ ((_cb1Buffer & 0b10) != 0) &&
+				((_cb1Buffer & 0b10) != 0) ^ ((_pcr & 0b00010000) != 0))
+			{
+				_interruptNextClock |= 0b00010000;
+			}
+
+			if (((_cb2Buffer & 0b01) != 0) ^ ((_cb2Buffer & 0b10) != 0) &&
+				((_cb2Buffer & 0b10) != 0) ^ ((_pcr & 0b00100000) != 0))
+			{
+				_interruptNextClock |= 0b00001000;
+			}
 
 			var clk = false;
 			bool pulse;
@@ -283,6 +273,9 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 			
 			_srBuffer = (_srBuffer << 1) | (clk ? 1 : 0);
 
+			if ((_srBuffer & 0b01) == 0 && (_srBuffer & 0b10) != 0 && !_srOn && (_acr & 0b00011100) != 0b00000000)
+				_interruptNextClock |= 0b00000100;
+
 			if (_srOn || (_acr & 0b00011100) == 0b00000000)
 			{
 				if ((_acr & 0b00001100) == 0)
@@ -301,47 +294,49 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.MOS
 
 		public void SyncState(Serializer ser)
 		{
-			ser.Sync("PortOutputA", ref _pra);
-			ser.Sync("PortDirectionA", ref _ddra);
-			ser.Sync("PortOutputB", ref _prb);
-			ser.Sync("PortDirectionB", ref _ddrb);
-			ser.Sync("Timer1Counter", ref _t1C);
-			ser.Sync("Timer1Latch", ref _t1L);
-			ser.Sync("Timer2Counter", ref _t2C);
-			ser.Sync("Timer2Latch", ref _t2L);
-			ser.Sync("ShiftRegister", ref _sr);
-			ser.Sync("AuxiliaryControlRegister", ref _acr);
-			ser.Sync("PeripheralControlRegister", ref _pcr);
-			ser.Sync("InterruptFlagRegister", ref _ifr);
-			ser.Sync("InterruptEnableRegister", ref _ier);
+			ser.Sync(nameof(_ora), ref _ora);
+			ser.Sync(nameof(_ddra), ref _ddra);
+			ser.Sync(nameof(_orb), ref _orb);
+			ser.Sync(nameof(_ddrb), ref _ddrb);
+			ser.Sync(nameof(_t1C), ref _t1C);
+			ser.Sync(nameof(_t1L), ref _t1L);
+			ser.Sync(nameof(_t2C), ref _t2C);
+			ser.Sync(nameof(_t2L), ref _t2L);
+			ser.Sync(nameof(_sr), ref _sr);
+			ser.Sync(nameof(_acr), ref _acr);
+			ser.Sync(nameof(_pcr), ref _pcr);
+			ser.Sync(nameof(_ifr), ref _ifr);
+			ser.Sync(nameof(_ier), ref _ier);
 
 			ser.BeginSection("Port");
 			_port.SyncState(ser);
 			ser.EndSection();
 
-			ser.Sync("PortLatchA", ref _ira);
-			ser.Sync("PortLatchB", ref _irb);
-			ser.Sync("PreviousCA1", ref _ca1Buffer);
-			ser.Sync("PreviousCA2", ref _ca2Buffer);
-			ser.Sync("PreviousCB1", ref _cb1Buffer);
-			ser.Sync("PreviousCB2", ref _cb2Buffer);
-			ser.Sync("PreviousPB6", ref _pb6L);
-			ser.Sync("Ca2Handshake", ref _ca2Handshake);
-			ser.Sync("Cb2Handshake", ref _cb2Handshake);
-			ser.Sync("Ca2Pulse", ref _ca2Pulse);
-			ser.Sync("Cb2Pulse", ref _cb2Pulse);
-			ser.Sync("CA2", ref _ca2Out);
-			ser.Sync("CB1", ref _cb1Out);
-			ser.Sync("CB2", ref _cb2Out);
-			ser.Sync("PB6", ref _pb6);
-			ser.Sync("InterruptNextClock", ref _interruptNextClock);
-			ser.Sync("T1Delayed", ref _t1Delayed);
-			ser.Sync("T2Delayed", ref _t2Delayed);
-			ser.Sync("ShiftRegisterCount", ref _srCount);
-			ser.Sync("T1IRQAllowed", ref _t1IrqAllowed);
-			ser.Sync("T1Output", ref _t1Out);
-			ser.Sync("ShiftRegOn", ref _srOn);
-			ser.Sync("ShiftRegDir", ref _srDir);
+			ser.Sync(nameof(_ira), ref _ira);
+			ser.Sync(nameof(_irb), ref _irb);
+			ser.Sync(nameof(_ca1Buffer), ref _ca1Buffer);
+			ser.Sync(nameof(_ca2Buffer), ref _ca2Buffer);
+			ser.Sync(nameof(_cb1Buffer), ref _cb1Buffer);
+			ser.Sync(nameof(_cb2Buffer), ref _cb2Buffer);
+			ser.Sync(nameof(_pb6L), ref _pb6L);
+			ser.Sync(nameof(_ca2Handshake), ref _ca2Handshake);
+			ser.Sync(nameof(_cb2Handshake), ref _cb2Handshake);
+			ser.Sync(nameof(_ca2Pulse), ref _ca2Pulse);
+			ser.Sync(nameof(_cb2Pulse), ref _cb2Pulse);
+			ser.Sync(nameof(_ca2Out), ref _ca2Out);
+			ser.Sync(nameof(_cb1Out), ref _cb1Out);
+			ser.Sync(nameof(_cb2Out), ref _cb2Out);
+			ser.Sync(nameof(_pb6), ref _pb6);
+			ser.Sync(nameof(_interruptNextClock), ref _interruptNextClock);
+			ser.Sync(nameof(_srCount), ref _srCount);
+			ser.Sync(nameof(_t1IrqAllowed), ref _t1IrqAllowed);
+			ser.Sync(nameof(_t1Out), ref _t1Out);
+			ser.Sync(nameof(_srOn), ref _srOn);
+			ser.Sync(nameof(_srDir), ref _srDir);
+			ser.Sync(nameof(_srBuffer), ref _srBuffer);
+			ser.Sync(nameof(_irq), ref _irq);
+			ser.Sync(nameof(_t1Reload), ref _t1Reload);
+			ser.Sync(nameof(_t2OneShot), ref _t2OneShot);
 		}
 	}
 }

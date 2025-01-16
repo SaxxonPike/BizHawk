@@ -35,7 +35,7 @@
 
 		private bool ViaReadByteReady()
 		{
-			return !_via1Ca1;
+			return _via1Ca1;
 		}
 
 		private bool ViaReadAtn()

@@ -99,30 +99,30 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 			Via1.SyncState(ser);
 			ser.EndSection();
 
-			ser.Sync("SystemCpuClockNumerator", ref _cpuClockNum);
-			ser.Sync("SystemDriveCpuRatioDifference", ref _ratioDifference);
-			ser.Sync("DriveLightOffTime", ref _driveLightOffTime);
+			ser.Sync(nameof(_cpuClockNum), ref _cpuClockNum);
+			ser.Sync(nameof(_ratioDifference), ref _ratioDifference);
+			ser.Sync(nameof(_driveLightOffTime), ref _driveLightOffTime);
 
-			ser.Sync("DiskDensityCounter", ref _diskDensityCounter);
-			ser.Sync("DiskSupplementaryCounter", ref _diskSupplementaryCounter);
-			ser.Sync("DiskFluxReversalDetected", ref _diskFluxReversalDetected);
-			ser.Sync("DiskBitsRemainingInDataEntry", ref _diskBitsLeft);
-			ser.Sync("DiskDataEntryIndex", ref _diskByteOffset);
-			ser.Sync("DiskDataEntry", ref _diskBits);
-			ser.Sync("DiskCurrentCycle", ref _diskCycle);
-			ser.Sync("DiskDensityConfig", ref _diskDensity);
-			ser.Sync("PreviousCA1", ref _previousCa1);
-			ser.Sync("CountsBeforeRandomTransition", ref _countsBeforeRandomTransition);
-			ser.Sync("CurrentRNG", ref _rngCurrent);
-			ser.Sync("Clocks", ref _clocks);
-			ser.Sync("CpuClocks", ref _cpuClocks);
-			ser.Sync("OverflowFlagDelayShiftRegister", ref _overflowFlagDelaySr);
-			ser.Sync("DiskWriteBitsRemaining", ref _diskWriteBitsRemaining);
-			ser.Sync("DiskWriteEnabled", ref _diskWriteEnabled);
-			ser.Sync("DiskWriteLatch", ref _diskWriteLatch);
-			ser.Sync("DiskOutputBits", ref _diskOutputBits);
-			ser.Sync("DiskWriteProtected", ref _diskWriteProtected);
-			ser.Sync("Via1Ca1", ref _via1Ca1);
+			ser.Sync(nameof(_diskDensityCounter), ref _diskDensityCounter);
+			ser.Sync(nameof(_diskSupplementaryCounter), ref _diskSupplementaryCounter);
+			ser.Sync(nameof(_diskFluxReversalDetected), ref _diskFluxReversalDetected);
+			ser.Sync(nameof(_diskBitsLeft), ref _diskBitsLeft);
+			ser.Sync(nameof(_diskByteOffset), ref _diskByteOffset);
+			ser.Sync(nameof(_diskBits), ref _diskBits);
+			ser.Sync(nameof(_diskCycle), ref _diskCycle);
+			ser.Sync(nameof(_diskDensity), ref _diskDensity);
+			ser.Sync(nameof(_previousCa1), ref _previousCa1);
+			ser.Sync(nameof(_countsBeforeRandomTransition), ref _countsBeforeRandomTransition);
+			ser.Sync(nameof(_rngCurrent), ref _rngCurrent);
+			ser.Sync(nameof(_clocks), ref _clocks);
+			ser.Sync(nameof(_cpuClocks), ref _cpuClocks);
+			ser.Sync(nameof(_overflowFlagDelaySr), ref _overflowFlagDelaySr);
+			ser.Sync(nameof(_diskWriteBitsRemaining), ref _diskWriteBitsRemaining);
+			ser.Sync(nameof(_diskWriteEnabled), ref _diskWriteEnabled);
+			ser.Sync(nameof(_diskWriteLatch), ref _diskWriteLatch);
+			ser.Sync(nameof(_diskOutputBits), ref _diskOutputBits);
+			ser.Sync(nameof(_diskWriteProtected), ref _diskWriteProtected);
+			ser.Sync(nameof(_via1Ca1), ref _via1Ca1);
 
 			if (ser.IsReader)
 			{
@@ -135,10 +135,10 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 
 			for (var diskNumber = 0; diskNumber < _usedDiskTracks.Length; diskNumber++)
 			{
-				ser.Sync($"_usedDiskTracks{diskNumber}", ref _usedDiskTracks[diskNumber], useNull: false);
+				ser.Sync($"{nameof(_usedDiskTracks)}{diskNumber}", ref _usedDiskTracks[diskNumber], useNull: false);
 				for (var trackNumber = 0; trackNumber < 84; trackNumber++)
 				{
-					ser.Sync($"DiskDeltas{diskNumber},{trackNumber}", ref _diskDeltas[diskNumber][trackNumber], useNull: true);
+					ser.Sync($"{nameof(_diskDeltas)}{diskNumber},{trackNumber}", ref _diskDeltas[diskNumber][trackNumber], useNull: true);
 				}
 			}
 
