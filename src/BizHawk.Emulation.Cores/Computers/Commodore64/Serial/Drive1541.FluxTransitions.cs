@@ -61,6 +61,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 							if (_diskWriteEnabled && track.Write(_diskByteOffset, _diskOutputBits))
 							{
 								_dirtyDiskTracks[_getCurrentDiskNumber()][_trackNumber] = true;
+								SaveRamModified = true;
 							}
 
 							_diskByteOffset++;
