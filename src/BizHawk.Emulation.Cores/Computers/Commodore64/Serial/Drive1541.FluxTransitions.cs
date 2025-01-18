@@ -144,7 +144,7 @@ namespace BizHawk.Emulation.Cores.Computers.Commodore64.Serial
 							_byteReady = false;
 							if (_diskWriteBitsRemaining <= 0)
 							{
-								_diskWriteLatch = Via1.PrA | ~Via1.DdrA;
+								_diskWriteLatch = Via1.PrA;
 								_diskWriteBitsRemaining = 8;
 								_byteReady = Via1.Ca2;
 							}
