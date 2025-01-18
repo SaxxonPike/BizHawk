@@ -112,10 +112,10 @@ public sealed class DiskTrack
 
 		var paddedLength = density switch
 		{
-			3 => Math.Max(bytes.Length, 7692 + 2),
-			2 => Math.Max(bytes.Length, 7142 + 2),
-			1 => Math.Max(bytes.Length, 6666 + 2),
-			0 => Math.Max(bytes.Length, 6250 + 2),
+			3 => Math.Max(bytes.Length, 7820),
+			2 => Math.Max(bytes.Length, 7170),
+			1 => Math.Max(bytes.Length, 6300),
+			0 => Math.Max(bytes.Length, 6020),
 			_ => bytes.Length
 		};
 
@@ -126,7 +126,7 @@ public sealed class DiskTrack
 		using var paddedBytesMem = MemoryPool<byte>.Shared.Rent(paddedLength);
 		var paddedBytes = paddedBytesMem.Memory.Span.Slice(0, paddedLength);
 		bytes.CopyTo(paddedBytes);
-		paddedBytes.Slice(bytes.Length).Fill(0xAA);
+		paddedBytes.Slice(bytes.Length).Fill(0x55);
 
 		long bitsDen = paddedLength * 8 + 3;
 		const long bitsNum = FluxEntriesPerTrack * FluxBitsPerEntry;
