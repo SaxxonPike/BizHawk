@@ -14,20 +14,26 @@
 
 		public int Read(int addr)
 		{
-			_lastAddr = addr & 0xF;
-			switch (_lastAddr)
+			addr &= 0xF;
+			switch (addr)
 			{
 				case 0x0:
 					_ifr &= ~IRQ_CB1;
 					if ((_pcr & PCR_CB2_ACK) == 0)
+					{
 						_ifr &= ~IRQ_CB2;
+					}
 					_cb2Handshake = true;
+					_cb2Pulse = false;
 					break;
 				case 0x1:
 					_ifr &= ~IRQ_CA1;
 					if ((_pcr & PCR_CA2_ACK) == 0)
+					{
 						_ifr &= ~IRQ_CA2;
+					}
 					_ca2Handshake = true;
+					_ca2Pulse = false;
 					break;
 				case 0x4:
 					_ifr &= ~IRQ_T1;
@@ -36,16 +42,12 @@
 					_ifr &= ~IRQ_T2;
 					break;
 				case 0xA:
+					_srAccessed = true;
 					_ifr &= ~IRQ_SR;
-					if (!_srOn && (_acr & 0b00011100) != 0)
-					{
-						_srCount = 7;
-						_srOn = true;
-					}
 					break;
 			}
 
-			return ReadRegister(_lastAddr);
+			return ReadRegister(addr);
 		}
 
 		private int ReadRegister(int addr)
@@ -90,20 +92,24 @@
 
 		public void Write(int addr, int val)
 		{
-			_lastAddr = addr & 0xF;
-			switch (_lastAddr)
+			addr &= 0xF;
+			switch (addr)
 			{
 				case 0x0:
-					_ifr &= 0b11101111;
-					if ((_pcr & 0b00100000) == 0)
-						_ifr &= 0b11110111;
-					WriteRegister(_lastAddr, val);
+					_ifr &= ~IRQ_CB1;
+					if ((_pcr & PCR_CB2_ACK) == 0)
+					{
+						_ifr &= ~IRQ_CB2;
+					}
+					WriteRegister(addr, val);
 					break;
 				case 0x1:
-					_ifr &= 0b11111101;
-					if ((_pcr & 0b00000010) == 0)
-						_ifr &= 0b11111110;
-					WriteRegister(_lastAddr, val);
+					_ifr &= ~IRQ_CA1;
+					if ((_pcr & PCR_CA2_ACK) == 0)
+					{
+						_ifr &= ~IRQ_CA2;
+					}
+					WriteRegister(addr, val);
 					break;
 				case 0x4:
 				case 0x6:
@@ -114,37 +120,41 @@
 					_t1C = _t1L;
 					_ifr &= ~IRQ_T1;
 					_t1Reload = false;
-					_t1Out = (_acr & ACR_T1_PB7_OUT) == 0;
+					_t1Out = false;
 					_t1IrqAllowed = true;
 					break;
 				case 0x7:
 					_t1L = (_t1L & 0xFF) | ((val & 0xFF) << 8);
-					_ifr &= 0b10111111;
+					_ifr &= ~IRQ_T1;
 					break;
 				case 0x8:
 					_t2L = (_t2L & 0xFF00) | (val & 0xFF);
 					break;
 				case 0x9:
 					_t2L = (_t2L & 0xFF) | ((val & 0xFF) << 8);
-					_ifr &= 0b11011111;
+					_ifr &= ~IRQ_T2;
 					_t2IrqAllowed = true;
 					break;
 				case 0xA:
-					_ifr &= 0b11111011;
-					_srCount = 8;
-					WriteRegister(_lastAddr, val);
+					_srAccessed = true;
+					_srWritten = true;
+					WriteRegister(addr, val);
 					break;
 				case 0xD:
 					_ifr &= ~(val & 0x7F);
 					break;
 				case 0xE:
-					if ((val & 0x80) != 0)
-						_ier |= val & 0x7F;
+					if ((val & IRQ_BIT) != 0)
+					{
+						_ier |= val & IRQ_MASK;
+					}
 					else
-						_ier &= ~(val & 0x7F);
+					{
+						_ier &= ~(val & IRQ_MASK);
+					}
 					break;
 				default:
-					WriteRegister(_lastAddr, val);
+					WriteRegister(addr, val);
 					break;
 			}
 		}
@@ -204,11 +214,11 @@
 
 		public int DdrA => _ddra;
 
-		public int DdrB => _ddrb | (_acr & 0b10000000);
+		public int DdrB => _ddrb | (_acr & ACR_T1_PB7_OUT);
 
 		public int PrA => _ora;
 
-		public int PrB => (_acr & 0b10000000) != 0
+		public int PrB => (_acr & ACR_T1_PB7_OUT) != 0
 			? (_orb & 0x7F) | (_t1Out ? 0x80 : 0x00)
 			: _orb;
 	}
